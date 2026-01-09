@@ -702,7 +702,7 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
       });
     }
 
-    // Animación de estrellas (Solo para la web)
+    // Animación de estrellas
     const canvas = document.getElementById('stars');
     const ctx = canvas.getContext('2d', { alpha: true });
     let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -745,17 +745,16 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
     // ═══════════════════════════════════════════════════════════════════
     const CFG = {
       W: 210, H: 297, ML: 25, MR: 25, CW: 160, YMAX: 270,
-      // Paleta de Colores
-      PINK_BRAND: [218, 85, 194],  // Rosa fuerte
-      PINK_LIGHT: [235, 150, 220], // Rosa claro
-      DARK_BG: [20, 10, 30],       // Fondo oscuro backup
-      TEXT_DARK: [35, 31, 32],     // Texto contenido
-      TEXT_WHITE: [255, 255, 255], // Texto blanco
-      CYAN_ONE: [120, 225, 240]    // Cian detalles
+      PINK_BRAND: [218, 85, 194],
+      PINK_LIGHT: [235, 150, 220],
+      DARK_BG: [20, 10, 30],
+      TEXT_DARK: [35, 31, 32],
+      TEXT_WHITE: [255, 255, 255],
+      CYAN_ONE: [120, 225, 240]
     };
 
     // ═══════════════════════════════════════════════════════════════════
-    // 3. LÓGICA DE PROCESAMIENTO (Funcionalidad Preservada)
+    // 3. FUNCIONES DE PROCESAMIENTO
     // ═══════════════════════════════════════════════════════════════════
     
     function procesarMarkdownCompleto(texto) {
@@ -822,11 +821,10 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // 4. FUNCIONES DE DIBUJO PDF (Diseño Profesional Mejorado)
+    // 4. FUNCIONES DE DIBUJO PDF
     // ═══════════════════════════════════════════════════════════════════
     
     function agregarMarcaDeAgua(doc, numeroPagina) {
-      // 1. MARCA DE AGUA (Logo fondo)
       try {
         doc.saveGraphicsState(); 
         doc.setGState(new doc.GState({ opacity: 0.08 })); 
@@ -837,7 +835,6 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
         doc.restoreGraphicsState(); 
       } catch (e) {}
 
-      // 2. PIE DE PÁGINA
       const bottomY = 285;
       doc.setDrawColor(...CFG.PINK_BRAND); 
       doc.setLineWidth(1);
@@ -852,7 +849,7 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
     }
 
     function crearPortada(doc, titulo, proyecto) {
-      // 1. FONDO DE IMAGEN
+      // FONDO
       try {
         doc.addImage('./img/pdf-fondoportada.jpg', 'JPEG', 0, 0, CFG.W, CFG.H);
       } catch (error) {
@@ -860,97 +857,120 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
         doc.rect(0, 0, CFG.W, CFG.H, 'F');
       }
 
-      // 2. BANDERÍN SUPERIOR IZQUIERDA (Logo Image)
-      // Sombra Banderín
+      // BANDERÍN SUPERIOR IZQUIERDO
       doc.setFillColor(0, 0, 0); 
       doc.setGState(new doc.GState({ opacity: 0.4 })); 
       doc.lines([[35, 0], [0, 45], [-17.5, -15], [-17.5, 15], [0, -45]], 27, 2, [1, 1], 'F');
       doc.setGState(new doc.GState({ opacity: 1 }));
       
-      // Banderín Rosa
       doc.setFillColor(...CFG.PINK_BRAND); 
       doc.lines([[35, 0], [0, 45], [-17.5, -15], [-17.5, 15], [0, -45]], 25, 0, [1, 1], 'F');
       
-      try { // Logo (Imagen Real)
+      try {
         doc.addImage('./img/one-iconocolor.png', 'PNG', 33, 8, 18, 18);
       } catch (e) {}
 
-      // 3. TEXTO "ONE" SUPERIOR DERECHA
+      // TEXTO "ONE" SUPERIOR DERECHA
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(40);
       doc.setTextColor(0, 0, 0);
-      doc.setGState(new doc.GState({ opacity: 0.4 })); // Sombra texto
+      doc.setGState(new doc.GState({ opacity: 0.4 }));
       doc.text("ONE", CFG.W - 23, 32, { align: 'right' });
       doc.setGState(new doc.GState({ opacity: 1 }));
       doc.setTextColor(...CFG.CYAN_ONE);
       doc.text("ONE", CFG.W - 25, 30, { align: 'right' });
 
-      // 4. FRANJA DINÁMICA (TÍTULO DEL MANUAL)
-      const yManual = 150;
-      doc.setFontSize(24); 
+      // FRANJA TÍTULO - MEJORADA Y AJUSTADA
+      const yManual = 145;
+      doc.setFontSize(32); // Título MÁS GRANDE
       doc.setFont('helvetica', 'bold');
-      // Calculamos ancho basado en el texto del manual
-      const anchoTexto = doc.getTextWidth(titulo);
-      const padding = 30;
-      const anchoTotal = anchoTexto + padding + 20; // 20 extra para el círculo
       
-      // -- Sombra de la franja --
+      const tituloLimpio = limpiarMarkdown(titulo);
+      const maxWidth = 150;
+      const lineasTitulo = doc.splitTextToSize(tituloLimpio, maxWidth);
+      
+      const lineHeight = 14;
+      const alturaTotalTexto = lineasTitulo.length * lineHeight;
+      const paddingVertical = 18;
+      const alturaFranja = alturaTotalTexto + (paddingVertical * 2);
+      
+      let anchoMaximo = 0;
+      lineasTitulo.forEach(linea => {
+        const ancho = doc.getTextWidth(linea);
+        if (ancho > anchoMaximo) anchoMaximo = ancho;
+      });
+      
+      const padding = 35;
+      const anchoTotal = anchoMaximo + padding + 20;
+      
+      // Sombra
       doc.setFillColor(0, 0, 0);
       doc.setGState(new doc.GState({ opacity: 0.4 }));
-      doc.roundedRect(2, yManual + 2, anchoTotal, 22, 0, 0, 'F');
-      doc.circle(anchoTotal + 2, yManual + 13, 11, 'F');
+      doc.roundedRect(2, yManual + 2, anchoTotal, alturaFranja, 0, 0, 'F');
+      doc.circle(anchoTotal + 2, yManual + (alturaFranja / 2) + 2, alturaFranja / 2, 'F');
       doc.setGState(new doc.GState({ opacity: 1 }));
 
-      // -- Franja Rosa Principal --
+      // Franja principal
       doc.setFillColor(...CFG.PINK_BRAND);
-      doc.roundedRect(0, yManual, anchoTotal, 22, 0, 0, 'F'); 
-      doc.circle(anchoTotal, yManual + 11, 11, 'F'); 
+      doc.roundedRect(0, yManual, anchoTotal, alturaFranja, 0, 0, 'F'); 
+      doc.circle(anchoTotal, yManual + (alturaFranja / 2), alturaFranja / 2, 'F'); 
 
-      // -- Efecto "Glossy" (Degradado simulado con brillo superior) --
+      // Efecto glossy
       doc.setFillColor(255, 255, 255);
       doc.setGState(new doc.GState({ opacity: 0.15 }));
-      doc.rect(0, yManual, anchoTotal, 11, 'F'); // Brillo mitad superior
+      doc.rect(0, yManual, anchoTotal, alturaFranja / 2, 'F');
       doc.setGState(new doc.GState({ opacity: 1 }));
 
-      // -- Texto Título (Manual) dentro de la franja --
+      // Texto del título
       doc.setTextColor(255, 255, 255);
-      doc.text(titulo, 20, yManual + 16); // Centrado verticalmente aprox
+      doc.setFontSize(32);
+      let yTexto = yManual + paddingVertical + 9;
+      lineasTitulo.forEach(linea => {
+        doc.text(linea, 25, yTexto);
+        yTexto += lineHeight;
+      });
 
-      // 5. PROYECTO (Debajo de la franja)
-      let yProyecto = yManual + 35;
-      
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'normal');
-      
-      // Sombra del texto proyecto
-      doc.setTextColor(0, 0, 0);
-      doc.setGState(new doc.GState({ opacity: 0.6 }));
-      doc.text(proyecto, 27, yProyecto + 1);
-      doc.setGState(new doc.GState({ opacity: 1 }));
-      
-      // Texto proyecto blanco
-      doc.setTextColor(255, 255, 255);
-      doc.text(proyecto, 25, yProyecto);
+      // PROYECTO - MÁS GRANDE Y VISIBLE
+      if (proyecto) {
+        let yProyecto = yManual + alturaFranja + 30;
+        
+        doc.setFontSize(24); // MÁS GRANDE
+        doc.setFont('helvetica', 'normal');
+        
+        const proyectoLimpio = limpiarMarkdown(proyecto);
+        
+        // Sombra del proyecto
+        doc.setTextColor(0, 0, 0);
+        doc.setGState(new doc.GState({ opacity: 0.6 }));
+        doc.text(proyectoLimpio, 27, yProyecto + 1);
+        doc.setGState(new doc.GState({ opacity: 1 }));
+        
+        // Texto proyecto
+        doc.setTextColor(255, 255, 255);
+        doc.text(proyectoLimpio, 25, yProyecto);
+      }
 
-      // 6. LOGO INFERIOR DERECHA (Imagen Real)
+      // LOGO INFERIOR DERECHA
       try {
         doc.addImage('./img/one-logoletra.png', 'PNG', CFG.W - 55, CFG.H - 30, 30, 15);
       } catch (e) {
         doc.setFontSize(16);
+        doc.setTextColor(255, 255, 255);
         doc.text("ONE", CFG.W - 25, CFG.H - 20, { align: 'right' });
       }
     }
 
     function crearIndice(doc, indices, pagina) {
+      // Solo crear si hay contenido
+      if (indices.length === 0) return;
+      
       agregarMarcaDeAgua(doc, pagina);
       
-      // TÍTULO DEL ÍNDICE
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(50, 0, 50); 
       doc.text('ÍNDICE DE CONTENIDOS', CFG.ML, 40);
       
-      // LÍNEA ROSA DEBAJO DEL TÍTULO
       doc.setDrawColor(...CFG.PINK_BRAND);
       doc.setLineWidth(1.5);
       doc.line(CFG.ML, 45, CFG.W - CFG.MR, 45);
@@ -975,6 +995,54 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
       });
     }
 
+    function procesarTextoConFormato(doc, texto, x, y, maxWidth) {
+      const partes = [];
+      let lastIndex = 0;
+      
+      const regexBold = /\*\*(.+?)\*\*/g;
+      let match;
+      
+      while ((match = regexBold.exec(texto)) !== null) {
+        if (match.index > lastIndex) {
+          partes.push({ texto: texto.substring(lastIndex, match.index), bold: false });
+        }
+        partes.push({ texto: match[1], bold: true });
+        lastIndex = match.index + match[0].length;
+      }
+      
+      if (lastIndex < texto.length) {
+        partes.push({ texto: texto.substring(lastIndex), bold: false });
+      }
+      
+      if (partes.length === 0) {
+        partes.push({ texto: texto, bold: false });
+      }
+      
+      let currentX = x;
+      const currentFont = doc.getFont();
+      
+      partes.forEach(parte => {
+        doc.setFont('helvetica', parte.bold ? 'bold' : 'normal');
+        
+        const palabras = parte.texto.split(' ');
+        palabras.forEach((palabra, idx) => {
+          const espaciado = idx > 0 ? ' ' : '';
+          const textoCompleto = espaciado + palabra;
+          const anchoTexto = doc.getTextWidth(textoCompleto);
+          
+          if (currentX + anchoTexto > x + maxWidth) {
+            return;
+          }
+          
+          doc.text(textoCompleto, currentX, y);
+          currentX += anchoTexto;
+        });
+      });
+      
+      doc.setFont(currentFont.fontName, currentFont.fontStyle);
+      return y;
+    }
+
     function crearContenido(doc, contenido, caps, tablasCSV, pagina) {
       let y = 40;
       agregarMarcaDeAgua(doc, pagina);
@@ -982,28 +1050,44 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
       
       caps.forEach(cap => { procesado = procesado.replace(cap.textoCompleto, `[CAPITULO_${cap.numero}]`); });
       
-      const bloques = procesado.split('\n\n');
+      const bloques = procesado.split('\n\n').filter(b => b.trim());
       
       bloques.forEach(bloque => {
         if (!bloque.trim()) return;
 
-        // 1. CAPÍTULOS
+        // CAPÍTULOS
         const matchCap = bloque.match(/\[CAPITULO_([\d.]+)\]/);
         if (matchCap) {
           const cap = caps.find(c => c.numero === matchCap[1]);
           if (cap) {
-            if (y > 230 || cap.nivel === 1) { doc.addPage(); pagina++; agregarMarcaDeAgua(doc, pagina); y = 40; }
+            if (cap.nivel === 1) { 
+              doc.addPage(); 
+              pagina++; 
+              agregarMarcaDeAgua(doc, pagina); 
+              y = 40; 
+            } else if (y > 230) {
+              doc.addPage(); 
+              pagina++; 
+              agregarMarcaDeAgua(doc, pagina); 
+              y = 40;
+            }
+            
             y += 10;
             const titulo = limpiarMarkdown(cap.titulo.toUpperCase());
             doc.setFont('helvetica', 'bold');
+            
             if (cap.nivel === 1) {
-                doc.setFontSize(16); doc.setTextColor(50, 0, 50);
+                doc.setFontSize(16); 
+                doc.setTextColor(50, 0, 50);
                 doc.text(`${cap.numero}. ${titulo}`, CFG.ML, y);
                 y += 2;
-                doc.setDrawColor(...CFG.PINK_BRAND); doc.setLineWidth(1); doc.line(CFG.ML, y, CFG.W - CFG.MR, y);
+                doc.setDrawColor(...CFG.PINK_BRAND); 
+                doc.setLineWidth(1); 
+                doc.line(CFG.ML, y, CFG.W - CFG.MR, y);
                 y += 15;
             } else {
-                doc.setFontSize(13); doc.setTextColor(...CFG.PINK_BRAND);
+                doc.setFontSize(13); 
+                doc.setTextColor(...CFG.PINK_BRAND);
                 doc.text(`${cap.numero} ${cap.titulo}`, CFG.ML, y);
                 y += 10;
             }
@@ -1011,13 +1095,21 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
           }
         }
 
-        // 2. TABLAS
+        // TABLAS
         const matchTabla = bloque.match(/\[TABLA_(\d+)\]/);
         if (matchTabla) {
           const tabla = tablasCSV[parseInt(matchTabla[1])];
           if (tabla) {
+             if (y > 200) {
+               doc.addPage();
+               pagina++;
+               agregarMarcaDeAgua(doc, pagina);
+               y = 40;
+             }
              doc.autoTable({
-               startY: y, head: [tabla.headers], body: tabla.rows,
+               startY: y, 
+               head: [tabla.headers], 
+               body: tabla.rows,
                theme: 'striped',
                headStyles: { fillColor: CFG.PINK_BRAND, textColor: [255,255,255], fontStyle: 'bold' },
                styles: { fontSize: 10, cellPadding: 3, textColor: CFG.TEXT_DARK },
@@ -1028,51 +1120,93 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
           }
         }
 
-        // 3. SEPARADORES
+        // SEPARADORES
         if (bloque.trim() === '---') {
-          y += 5; doc.setDrawColor(...CFG.PINK_LIGHT); doc.setLineWidth(0.5); doc.line(CFG.ML, y, CFG.W - CFG.MR, y); y += 10;
+          if (y > CFG.YMAX - 10) {
+            doc.addPage();
+            pagina++;
+            agregarMarcaDeAgua(doc, pagina);
+            y = 40;
+          }
+          y += 5; 
+          doc.setDrawColor(...CFG.PINK_LIGHT); 
+          doc.setLineWidth(0.5); 
+          doc.line(CFG.ML, y, CFG.W - CFG.MR, y); 
+          y += 10;
           return;
         }
 
-        // 4. LISTAS Y TEXTO
-        if (y > CFG.YMAX - 15) { doc.addPage(); pagina++; agregarMarcaDeAgua(doc, pagina); y = 40; }
-        doc.setTextColor(...CFG.TEXT_DARK); doc.setFontSize(10); doc.setFont('helvetica', 'normal');
+        // LISTAS Y TEXTO
+        if (y > CFG.YMAX - 15) { 
+          doc.addPage(); 
+          pagina++; 
+          agregarMarcaDeAgua(doc, pagina); 
+          y = 40; 
+        }
+        
+        doc.setTextColor(...CFG.TEXT_DARK); 
+        doc.setFontSize(10); 
+        doc.setFont('helvetica', 'normal');
 
         const esLista = /^[\*\-]\s+/.test(bloque) || /^\d+\.\s+/.test(bloque);
         if (esLista) {
             const items = bloque.split('\n');
             items.forEach(item => {
-               let txt = item, bullet = '', off = 0;
-               if (/^[\*\-]\s+/.test(item)) {
-                   bullet = '•'; txt = limpiarMarkdown(item.replace(/^[\*\-]\s+/, '')); off = 5;
-                   doc.setTextColor(...CFG.PINK_BRAND); doc.text(bullet, CFG.ML, y); doc.setTextColor(...CFG.TEXT_DARK);
-               } else if (/^\d+\.\s+/.test(item)) {
-                   const m = item.match(/^(\d+\.)\s+/); bullet = m[1]; txt = limpiarMarkdown(item.replace(/^\d+\.\s+/, '')); off = 8;
-                   doc.setFont('helvetica', 'bold'); doc.text(bullet, CFG.ML, y); doc.setFont('helvetica', 'normal');
+               if (!item.trim()) return;
+               
+               if (y > CFG.YMAX - 10) {
+                 doc.addPage();
+                 pagina++;
+                 agregarMarcaDeAgua(doc, pagina);
+                 y = 40;
                }
-               const ls = doc.splitTextToSize(txt, CFG.CW - off);
-               ls.forEach(l => { 
-                   if(y > CFG.YMAX-10) { doc.addPage(); pagina++; agregarMarcaDeAgua(doc, pagina); y=40; }
-                   doc.text(l, CFG.ML + off, y); y += 5; 
-               });
-               y += 2;
+               
+               let txt = item, bullet = '', off = 0;
+               
+               if (/^[\*\-]\s+/.test(item)) {
+                   bullet = '•'; 
+                   txt = item.replace(/^[\*\-]\s+/, ''); 
+                   off = 8;
+                   doc.setTextColor(...CFG.PINK_BRAND); 
+                   doc.setFontSize(12);
+                   doc.text(bullet, CFG.ML, y);
+                   doc.setTextColor(...CFG.TEXT_DARK);
+                   doc.setFontSize(10);
+               } else if (/^\d+\.\s+/.test(item)) {
+                   const m = item.match(/^(\d+\.)\s+/); 
+                   bullet = m[1]; 
+                   txt = item.replace(/^\d+\.\s+/, ''); 
+                   off = 12;
+                   doc.setFont('helvetica', 'bold'); 
+                   doc.text(bullet, CFG.ML, y); 
+                   doc.setFont('helvetica', 'normal');
+               }
+               
+               procesarTextoConFormato(doc, txt, CFG.ML + off, y, CFG.CW - off);
+               y += 6;
             });
             y += 4;
             return;
         }
 
-        const txt = limpiarMarkdown(bloque);
-        const ls = doc.splitTextToSize(txt, CFG.CW);
-        ls.forEach(l => {
-           if(y > CFG.YMAX-10) { doc.addPage(); pagina++; agregarMarcaDeAgua(doc, pagina); y=40; }
-           doc.text(l, CFG.ML, y); y += 5;
+        // TEXTO NORMAL con formato
+        const lineas = doc.splitTextToSize(bloque, CFG.CW);
+        lineas.forEach(linea => {
+           if (y > CFG.YMAX - 10) {
+             doc.addPage();
+             pagina++;
+             agregarMarcaDeAgua(doc, pagina);
+             y = 40;
+           }
+           procesarTextoConFormato(doc, linea, CFG.ML, y, CFG.CW);
+           y += 5;
         });
         y += 4;
       });
     }
 
     // ═══════════════════════════════════════════════════════════════════
-    // 5. EJECUCIÓN PRINCIPAL
+    // 5. FUNCIÓN PRINCIPAL
     // ═══════════════════════════════════════════════════════════════════
     function generarPDF() {
       const titulo = document.getElementById('titulo').value.trim();
@@ -1080,7 +1214,6 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
       const indiceTexto = document.getElementById('indice').value.trim();
       const contenidoRaw = document.getElementById('contenido').value.trim();
       
-      // Validación estricta incluyendo Proyecto
       if (!titulo || !indiceTexto || !contenidoRaw || !proyecto) { 
         alert('❌ Faltan datos obligatorios. Por favor completa Título, Proyecto, Índice y Contenido.'); 
         return; 
@@ -1095,13 +1228,25 @@ Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
         const indices = analizarIndice(indiceTexto);
         const caps = detectarCapitulos(procesado, indices);
 
-        crearPortada(doc, titulo, proyecto); pag++;
+        // PORTADA
+        crearPortada(doc, titulo, proyecto); 
+        pag++;
         
-        doc.addPage(); crearIndice(doc, indices, pag); pag++;
+        // ÍNDICE (solo si tiene contenido)
+        if (indices.length > 0) {
+          doc.addPage(); 
+          crearIndice(doc, indices, pag); 
+          pag++;
+        }
         
-        doc.addPage(); crearContenido(doc, procesado, caps, tablasCSV, pag);
+        // CONTENIDO (solo si tiene capítulos)
+        if (caps.length > 0) {
+          doc.addPage(); 
+          crearContenido(doc, procesado, caps, tablasCSV, pag);
+        }
 
         doc.save(titulo.toLowerCase().replace(/\s+/g, '_') + '_ONE.pdf');
+        alert('✅ PDF generado correctamente!');
         
       } catch (e) {
         console.error(e);
