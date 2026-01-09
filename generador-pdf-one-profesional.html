@@ -642,11 +642,45 @@
     </footer>
   </div>
 
-  <div class="modal" id="promptModal">
+<div class="modal" id="promptModal">
     <div class="modal-content">
       <button class="modal-close" onclick="cerrarPrompt()">&times;</button>
       <h3>📋 Prompt Recomendado</h3>
-      <div class="prompt-text" id="promptText">Eres un asistente especializado en crear manuales con el sistema ONE. Procesa correctamente: ## títulos, ### subtítulos, **negritas**, *cursivas*, listas y tablas CSV.</div>
+      <div class="prompt-text" id="promptText" style="white-space: pre-wrap;">Rol: Actúa como un Expert Technical Writer especializado en Documentación Corporativa y Procesos.
+
+Objetivo: Redactar un manual de usuario exhaustivo (de 2,500 a 4,000 palabras) para un sistema basado en los archivos adjuntos.
+
+⚠️ INSTRUCCIONES CRÍTICAS DE FORMATO Y SALIDA:
+1. SALIDA EN UN ÚNICO BLOQUE DE CÓDIGO: Para asegurar la integridad del texto crudo, toda tu respuesta (desde el título, pasando por el índice, hasta el punto final del manual) debe estar encerrada dentro de un único bloque de código Markdown. No escribas nada fuera de ese bloque.
+2. CERO EMOJIS: Está terminantemente prohibido usar emojis o iconos gráficos en cualquier parte del texto. El estilo debe ser sobrio, limpio y profesional.
+3. TABLAS EN FORMATO CSV: Si necesitas representar datos estructurados (tablas), NO uses formato visual ni de markdown tradicional. Escribe los datos estrictamente en formato CSV (Valores Separados por Comas).
+   * Ejemplo obligatorio:
+     Campo,Descripción,Acción
+     Nombre,Ingresa tu nombre,Escribir texto
+4. MARKDOWN JERÁRQUICO: Dentro del bloque de código, usa # para el Título Principal, ## para Capítulos y ### para Subtítulos.
+
+REGLAS DE CONTENIDO:
+* Lenguaje de Usuario: Prohibido mencionar variables, scripts .gs, html o código interno. Traduce todo a: "Pantallas", "Botones", "Formularios", "Bases de Datos", "Carpetas".
+* Correspondencia Exacta: Los títulos desarrollados en el cuerpo del texto deben ser idénticos a los definidos en el Índice (copia textual).
+* Profundidad: No resumas. Extiéndete en cada explicación paso a paso.
+
+ESTRUCTURA A SEGUIR (Todo dentro del bloque de código):
+
+PASO 1: Índice Maestro
+Crea un índice numerado (1, 2, 3...) con al menos 8 Capítulos Principales que cubran todo el flujo.
+
+PASO 2: Desarrollo del Manual
+Desarrolla el contenido respetando estrictamente el índice. Guía de contenido:
+1. Introducción y Propuesta de Valor: Qué hace el sistema y beneficios.
+2. Acceso y Requisitos: Cómo entrar a la URL y explicación sencilla de los permisos de Google.
+3. Recorrido Visual: Descripción de la interfaz.
+4. Operación Paso a Paso: Guía de llenado de formularios y uso de botones.
+5. Lógica del Sistema: Explica cómo el sistema lee la "Base de Datos" y usa archivos de la "Carpeta Main" en la nube.
+6. Gestión de Resultados: Dónde se guardan los archivos finales.
+7. Guía de Solución de Dudas: (Aquí es obligatorio usar formato CSV para listar Problema, Causa, Solución).
+8. Consejos de Eficiencia: Buenas prácticas.
+
+¡Comienza! Genera el Índice y el Manual completo dentro del bloque de código ahora.</div>
       <button class="copy-btn" id="copyBtn" onclick="copiarPrompt()">📋 Copiar Prompt</button>
     </div>
   </div>
