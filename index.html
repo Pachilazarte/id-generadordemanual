@@ -1403,75 +1403,99 @@ else if (bloque.type === 'TABLA') {
       // ═══════════════════════════════════════════════════════════════════
       // ÍNDICE CON PAGINACIÓN
       // ═══════════════════════════════════════════════════════════════════
-      function generarIndiceConEstilo(doc, indiceRaw) {
-          if (!indiceRaw.trim()) return;
-          
-          doc.addPage();
-          
-          const fy = 285;
-          doc.setDrawColor(...CFG.COLORS.PINK);
-          doc.setLineWidth(1);
-          doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
-          
-          doc.setFontSize(24);
-          doc.setTextColor(...CFG.COLORS.PURPLE);
-          doc.setFont(CFG.FONT, 'bold');
-          doc.text('ÍNDICE DE CONTENIDOS', CFG.ML, CFG.MT);
-          
-          doc.setDrawColor(...CFG.COLORS.PINK);
-          doc.setLineWidth(1);
-          doc.line(CFG.ML, CFG.MT + 5, CFG.PAGE_W - CFG.MR, CFG.MT + 5);
-          
-          let y = CFG.MT + 20;
-          
-          const lineas = indiceRaw.split('\n').filter(l => !l.toLowerCase().includes('índice') && l.trim().length > 0);
-          const esCorto = lineas.length < 16;
-          const fSize = esCorto ? CFG.SIZES.INDEX_BIG : CFG.SIZES.INDEX_SMALL;
-          const gap = esCorto ? 10 : 7;
-          
-          const Y_LIMIT_INDICE = 265;
+function generarIndiceConEstilo(doc, indiceRaw) {
+    if (!indiceRaw.trim()) return;
+    
+    doc.addPage();
+    
+    const fy = 285;
+    doc.setDrawColor(...CFG.COLORS.PINK);
+    doc.setLineWidth(1);
+    doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
+    
+    doc.setFontSize(24);
+    doc.setTextColor(...CFG.COLORS.PURPLE);
+    doc.setFont(CFG.FONT, 'bold');
+    doc.text('ÍNDICE DE CONTENIDOS', CFG.ML, CFG.MT);
+    
+    doc.setDrawColor(...CFG.COLORS.PINK);
+    doc.setLineWidth(1);
+    doc.line(CFG.ML, CFG.MT + 5, CFG.PAGE_W - CFG.MR, CFG.MT + 5);
+    
+    let y = CFG.MT + 20;
+    
+    const lineas = indiceRaw.split('\n').filter(l => !l.toLowerCase().includes('índice') && l.trim().length > 0);
+    const esCorto = lineas.length < 16;
+    const fSize = esCorto ? CFG.SIZES.INDEX_BIG : CFG.SIZES.INDEX_SMALL;
+    const gap = esCorto ? 10 : 7;
+    
+    const Y_LIMIT_INDICE = 265;
 
-          lineas.forEach(linea => {
-              if (y > Y_LIMIT_INDICE) {
-                  doc.addPage();
-                  doc.setDrawColor(...CFG.COLORS.PINK);
-                  doc.setLineWidth(1);
-                  doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
-                  y = CFG.MT;
-              }
-              
-              let l = linea.trim().replace(/\*\*/g, '');
-              let esTituloIndice = false;
-              
-              if (l.startsWith('##')) {
-                  esTituloIndice = true;
-                  l = l.replace(/^#+\s*/, '');
-              }
-              
-              const matchNum = l.match(/^(\d+(?:\.\d+)*\.?)\s*(.*)/);
-              
-              if (esTituloIndice) {
-                  doc.setFont(CFG.FONT, 'bold');
-                  doc.setTextColor(...CFG.COLORS.PURPLE);
-                  doc.setFontSize(fSize + 2);
-                  doc.text(l.toUpperCase(), CFG.ML, y);
-              } else if (matchNum) {
-                  doc.setFont(CFG.FONT, 'bold');
-                  doc.setTextColor(...CFG.COLORS.PURPLE);
-                  doc.setFontSize(fSize);
-                  doc.text(matchNum[1], CFG.ML, y);
-                  doc.setFont(CFG.FONT, 'normal');
-                  doc.setTextColor(...CFG.COLORS.DARK);
-                  doc.text(matchNum[2], CFG.ML + 12, y);
-              } else {
-                  doc.setFont(CFG.FONT, 'normal');
-                  doc.setTextColor(...CFG.COLORS.DARK);
-                  doc.setFontSize(fSize);
-                  doc.text(l, CFG.ML, y);
-              }
-              y += gap;
-          });
-      }
+    // ✅ FUNCIÓN PARA PROCESAR NEGRITAS EN ÍNDICE
+    function escribirLineaConNegritas(texto, x, y, fontSize, colorBase) {
+        const partes = texto.split(/(\*\*.*?\*\*)/g);
+        let xActual = x;
+        
+        doc.setFontSize(fontSize);
+        
+        partes.forEach(parte => {
+            if (!parte) return;
+            
+            const esBold = parte.startsWith('**') && parte.endsWith('**');
+            const textoLimpio = esBold ? parte.replace(/\*\*/g, '') : parte;
+            
+            if (!textoLimpio) return;
+            
+            doc.setFont(CFG.FONT, esBold ? 'bold' : 'normal');
+            doc.setTextColor(...colorBase);
+            doc.text(textoLimpio, xActual, y);
+            xActual += doc.getTextWidth(textoLimpio);
+        });
+    }
+
+    lineas.forEach(linea => {
+        if (y > Y_LIMIT_INDICE) {
+            doc.addPage();
+            doc.setDrawColor(...CFG.COLORS.PINK);
+            doc.setLineWidth(1);
+            doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
+            y = CFG.MT;
+        }
+        
+        let l = linea.trim();
+        let esTituloIndice = false;
+        
+        if (l.startsWith('##')) {
+            esTituloIndice = true;
+            l = l.replace(/^#+\s*/, '');
+        }
+        
+        // ✅ NO eliminar ** aquí, se procesarán en escribirLineaConNegritas
+        const matchNum = l.match(/^(\d+(?:\.\d+)*\.?)\s*(.*)/);
+        
+        if (esTituloIndice) {
+            // Título del índice (sin negritas procesadas)
+            const textoSinAsteriscos = l.replace(/\*\*/g, '');
+            doc.setFont(CFG.FONT, 'bold');
+            doc.setTextColor(...CFG.COLORS.PURPLE);
+            doc.setFontSize(fSize + 2);
+            doc.text(textoSinAsteriscos.toUpperCase(), CFG.ML, y);
+        } else if (matchNum) {
+            // Línea con numeración
+            doc.setFont(CFG.FONT, 'bold');
+            doc.setTextColor(...CFG.COLORS.PURPLE);
+            doc.setFontSize(fSize);
+            doc.text(matchNum[1], CFG.ML, y);
+            
+            // ✅ APLICAR NEGRITAS AL TEXTO DESPUÉS DEL NÚMERO
+            escribirLineaConNegritas(matchNum[2], CFG.ML + 12, y, fSize, CFG.COLORS.DARK);
+        } else {
+            // Línea sin numeración
+            escribirLineaConNegritas(l, CFG.ML, y, fSize, CFG.COLORS.DARK);
+        }
+        y += gap;
+    });
+}
 
       // ═══════════════════════════════════════════════════════════════════
       // CONTRAPORTADA
