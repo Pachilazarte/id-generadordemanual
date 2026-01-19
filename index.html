@@ -1,1542 +1,1680 @@
-<!doctype html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ONE - Generador de Manuales PDF Profesional</title>
-
-  <link rel="icon" type="image/png" href="./img/favicon.png" sizes="32x32">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-
-  <style>
-    :root {
-      --c-black: #000000;
-      --c-ink: #1a181d;
-      --c-white: #fefeff;
-      --c-pink: #e17bd7;
-      --c-cyan: #6be1e3;
-      --c-gold: #e4c76a;
-      --c-slate: #a4a8c0;
-      --c-mist: #c6c9d7;
-      --font-title: "Exo 2", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      --font-sub: "Futura", "Futura PT", "Avenir", "Trebuchet MS", "Segoe UI", Arial, sans-serif;
-      --container: 1200px;
-      --radius-xl: 28px;
-      --radius-lg: 18px;
-      --shadow-soft: 0 18px 60px rgba(0,0,0,.55);
-      --glass: rgba(254,254,255,.08);
-      --stroke: rgba(198,201,215,.25);
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html {
-      height: 100%;
-      scrollbar-width: thin;
-      scrollbar-color: var(--c-pink) var(--c-black);
-    }
-
-    body {
-      min-height: 100vh;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      background-color: var(--c-black);
-      color: var(--c-white);
-      font-family: var(--font-sub);
-      overflow-x: hidden;
-      line-height: 1.6;
-    }
-
-    a { color: inherit; text-decoration: none; }
-    img { max-width: 100%; display: block; }
-
-    .bg {
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      background: 
-        radial-gradient(1200px 700px at 70% 25%, rgba(225,123,215,.18), transparent 55%),
-        radial-gradient(1100px 700px at 80% 60%, rgba(107,225,227,.14), transparent 55%),
-        radial-gradient(900px 600px at 20% 70%, rgba(228,199,106,.10), transparent 60%),
-        linear-gradient(180deg, var(--c-black), var(--c-ink));
-    }
-
-    .bg::before {
-      content: "";
-      position: absolute;
-      inset: -10%;
-      background:
-        radial-gradient(circle at 25% 20%, rgba(107,225,227,.12), transparent 40%),
-        radial-gradient(circle at 80% 35%, rgba(225,123,215,.12), transparent 38%),
-        radial-gradient(circle at 55% 85%, rgba(228,199,106,.10), transparent 45%);
-      filter: blur(18px);
-      opacity: .95;
-    }
-
-    .hex {
-      position: absolute;
-      inset: -20%;
-      opacity: .16;
-      filter: drop-shadow(0 0 12px rgba(107,225,227,.15));
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='150'%3E%3Cg fill='none' stroke='%23c6c9d7' stroke-opacity='0.85' stroke-width='1'%3E%3Cpath d='M50 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M120 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M190 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M85 55l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M155 55l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M50 90l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M120 90l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M190 90l20-12 20 12v24l-20 12-20-12z'/%3E%3C/g%3E%3C/svg%3E");
-      background-size: 260px 150px;
-      transform: rotate(-8deg);
-      mix-blend-mode: screen;
-    }
-
-    canvas#stars { position: absolute; inset: 0; }
-
-    .wrap {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      min-height: 100vh;
-    }
-
-    header {
-      width: 100%;
-      padding: 26px 22px 8px;
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      background: linear-gradient(180deg, rgba(0,0,0,.35), transparent);
-      backdrop-filter: blur(10px);
-    }
-
-    header.scrolled {
-      background: rgba(0,0,0,.7);
-      box-shadow: 0 10px 30px rgba(0,0,0,.35);
-      border-bottom: 1px solid rgba(198,201,215,.10);
-    }
-
-    .nav {
-      max-width: var(--container);
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      gap: 18px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      user-select: none;
-    }
-
-    .brand .mark {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      background-image: url('./img/one-iconocolor.png');
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-      box-shadow: 0 0 0 1px rgba(198,201,215,.18), 0 0 40px rgba(107,225,227,.18);
-      position: relative;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .brand .mark::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 30% 30%, rgba(254,254,255,.14), transparent 55%);
-      pointer-events: none;
-    }
-
-    .brand .name {
-      font-family: var(--font-title);
-      letter-spacing: .04em;
-      font-weight: 800;
-      font-size: 24px;
-      line-height: 1.1;
-    }
-
-    .brand .sub {
-      display: block;
-      font-family: var(--font-sub);
-      font-weight: 500;
-      font-size: 13px;
-      color: rgba(198,201,215,.85);
-      letter-spacing: .02em;
-      margin-top: 2px;
-    }
-
-    main {
-      flex: 1;
-      width: 100%;
-      padding: 60px 30px 100px;
-    }
-
-    .container {
-      max-width: var(--container);
-      margin: 0 auto;
-    }
-
-    .hero-section {
-      text-align: center;
-      margin-bottom: 80px;
-    }
-
-    .hero-section h1 {
-      font-family: var(--font-title);
-      font-size: clamp(48px, 6vw, 72px);
-      line-height: 1.1;
-      margin: 0 0 30px;
-      letter-spacing: -.02em;
-      text-shadow: 0 10px 40px rgba(0,0,0,.55);
-    }
-
-    .grad-cyan {
-      background: linear-gradient(90deg, var(--c-cyan), rgba(107,225,227,.65));
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .hero-section p {
-      max-width: 800px;
-      margin: 0 auto 40px;
-      font-size: 20px;
-      line-height: 1.8;
-      color: rgba(198,201,215,.95);
-    }
-
-    .prompt-btn {
-      background: linear-gradient(135deg, var(--c-gold), var(--c-pink));
-      color: var(--c-white);
-      padding: 16px 40px;
-      border: none;
-      border-radius: 999px;
-      font-size: 1.1em;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 10px 30px rgba(228,199,106,.4);
-      font-family: var(--font-title);
-      margin-bottom: 30px;
-    }
-
-    .prompt-btn:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 50px rgba(228,199,106,.6);
-    }
-
-    .form-wrapper {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 40px;
-      max-width: 1000px;
-      margin: 0 auto;
-    }
-
-    .input-group {
-      background: var(--glass);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--stroke);
-      border-radius: var(--radius-lg);
-      padding: 40px;
-      box-shadow: var(--shadow-soft);
-      transition: all 0.3s;
-    }
-
-    .input-group:hover {
-      border-color: rgba(107,225,227,.35);
-      box-shadow: 0 25px 70px rgba(0,0,0,.65);
-    }
-
-    .input-group h3 {
-      font-family: var(--font-title);
-      font-size: 1.8em;
-      font-weight: 800;
-      margin-bottom: 25px;
-      color: var(--c-white);
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .input-group h3::before {
-      content: '▸';
-      color: var(--c-cyan);
-      font-size: 1.3em;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 12px;
-      color: var(--c-slate);
-      font-weight: 600;
-      font-size: 1em;
-      font-family: var(--font-title);
-    }
-
-    input[type="text"], textarea {
-      width: 100%;
-      padding: 18px;
-      background: rgba(0,0,0,.5);
-      border: 1px solid var(--stroke);
-      border-radius: 14px;
-      color: var(--c-white);
-      font-family: var(--font-sub);
-      font-size: 16px;
-      margin-bottom: 25px;
-      transition: all 0.3s;
-    }
-
-    input[type="text"]:focus, textarea:focus {
-      outline: none;
-      border-color: var(--c-cyan);
-      box-shadow: 0 0 30px rgba(107,225,227,.35);
-      background: rgba(0,0,0,.7);
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 250px;
-      font-family: 'Courier New', monospace;
-      line-height: 1.7;
-    }
-
-    textarea#contenido { min-height: 600px; }
-
-    ::placeholder {
-      color: var(--c-slate);
-      opacity: 0.5;
-    }
-
-    .info-box {
-      background: rgba(107,225,227,.08);
-      border-left: 4px solid var(--c-cyan);
-      border-radius: 12px;
-      padding: 25px;
-      margin-top: 20px;
-      color: var(--c-cyan);
-    }
-
-    .info-box h4 {
-      margin-bottom: 15px;
-      font-size: 1.15em;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-family: var(--font-title);
-    }
-
-    .info-box ul {
-      list-style: none;
-      padding-left: 0;
-      margin: 0;
-    }
-
-    .info-box li {
-      padding: 8px 0;
-      font-size: 0.95em;
-      color: var(--c-mist);
-      line-height: 1.6;
-    }
-
-    .info-box li::before {
-      content: "✓ ";
-      color: var(--c-gold);
-      font-weight: bold;
-      margin-right: 10px;
-    }
-
-    .generate-section {
-      text-align: center;
-      margin-top: 60px;
-      padding: 40px 0;
-    }
-
-    .generate-btn {
-      background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
-      color: var(--c-white);
-      padding: 28px 80px;
-      border: none;
-      border-radius: 999px;
-      font-size: 1.8em;
-      font-weight: 800;
-      cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 20px 50px rgba(107,225,227,.5);
-      font-family: var(--font-title);
-      position: relative;
-      overflow: hidden;
-      margin: 10px;
-    }
-
-    .generate-btn:hover {
-      transform: translateY(-6px) scale(1.05);
-      box-shadow: 0 30px 70px rgba(225,123,215,.7);
-    }
-
-    .generate-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.85);
-      backdrop-filter: blur(12px);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal.active { display: flex; }
-
-    .modal-content {
-      background: var(--c-ink);
-      border: 2px solid var(--stroke);
-      border-radius: var(--radius-xl);
-      padding: 50px;
-      max-width: 800px;
-      width: 90%;
-      box-shadow: var(--shadow-soft);
-      position: relative;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: none;
-      border: none;
-      color: var(--c-mist);
-      font-size: 36px;
-      cursor: pointer;
-      transition: color 0.3s;
-    }
-
-    .modal-close:hover { color: var(--c-white); }
-
-    .modal h3 {
-      font-size: 2.2em;
-      margin-bottom: 25px;
-      background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-family: var(--font-title);
-    }
-
-    .prompt-text {
-      background: rgba(0,0,0,.5);
-      border: 1px solid var(--stroke);
-      border-radius: 14px;
-      padding: 25px;
-      font-family: 'Courier New', monospace;
-      color: var(--c-cyan);
-      font-size: 1em;
-      line-height: 1.9;
-      margin-bottom: 25px;
-      max-height: 450px;
-      overflow-y: auto;
-    }
-
-    .copy-btn {
-      background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
-      color: var(--c-white);
-      padding: 18px 45px;
-      border: none;
-      border-radius: 999px;
-      font-size: 1.2em;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 10px 35px rgba(107,225,227,.35);
-      font-family: var(--font-title);
-      width: 100%;
-    }
-
-    .copy-btn:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 20px 50px rgba(107,225,227,.6);
-    }
-
-    .copy-btn.copied {
-      background: linear-gradient(135deg, var(--c-gold), var(--c-pink));
-    }
-
-    /* Modal de Vista Previa PDF */
-    .pdf-preview-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.95);
-      backdrop-filter: blur(12px);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .pdf-preview-modal.active { display: flex; }
-
-    .pdf-preview-content {
-      background: var(--c-ink);
-      border: 2px solid var(--stroke);
-      border-radius: var(--radius-xl);
-      padding: 30px;
-      width: 95%;
-      max-width: 1200px;
-      height: 90vh;
-      box-shadow: var(--shadow-soft);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .pdf-preview-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid var(--stroke);
-    }
-
-    .pdf-preview-header h3 {
-      font-size: 1.8em;
-      background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      font-family: var(--font-title);
-      margin: 0;
-    }
-
-    .pdf-preview-close {
-      background: rgba(225,123,215,.2);
-      border: 1px solid var(--c-pink);
-      color: var(--c-white);
-      padding: 10px 25px;
-      border-radius: 999px;
-      font-size: 1em;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.3s;
-      font-family: var(--font-title);
-    }
-
-    .pdf-preview-close:hover {
-      background: var(--c-pink);
-      transform: translateY(-2px);
-    }
-
-    .pdf-preview-container {
-      flex: 1;
-      overflow: hidden;
-      border-radius: var(--radius-lg);
-      background: #2a2a2a;
-    }
-
-    .pdf-preview-container iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-      border-radius: var(--radius-lg);
-    }
-
-    .loading-spinner {
-      display: none;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .loading-spinner.active {
-      display: block;
-    }
-
-    .spinner {
-      border: 4px solid rgba(107,225,227,.2);
-      border-top: 4px solid var(--c-cyan);
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    .loading-spinner p {
-      color: var(--c-cyan);
-      font-size: 1.2em;
-      font-weight: 600;
-    }
-
-    .premium-footer {
-      width: 100%;
-      margin-top: auto;
-      flex-shrink: 0;
-      border-top: 3px solid #ff69b4;
-      background: #000000 !important;
-      padding: 22px 0;
-      color: #ffffff;
-      font-size: 14px;
-      z-index: 10;
-    }
-
-    .footer-container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 0 30px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .footer-left {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      opacity: 0.9;
-    }
-
-    .footer-logo-letra {
-      height: 20px;
-      width: auto;
-    }
-
-    .footer-right {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-    }
-
-    .developed-txt {
-      font-size: 13px;
-      opacity: 0.75;
-    }
-
-    .dev-link {
-      display: flex;
-      align-items: center;
-      text-decoration: none;
-      transition: opacity 0.3s ease, transform 0.3s ease;
-    }
-
-    .dev-link:hover {
-      opacity: 0.85;
-      transform: translateY(-2px);
-    }
-
-    .dev-logo-one { height: 24px; width: auto; }
-    .by-txt { margin: 0 8px; font-style: italic; opacity: 0.75; font-size: 14px; }
-    .dev-logo-escencial { height: 26px; width: auto; }
-
-    ::-webkit-scrollbar { width: 12px; }
-    ::-webkit-scrollbar-track { background: var(--c-black); }
-    ::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, var(--c-cyan), var(--c-pink));
-      border-radius: 99px;
-      border: 3px solid var(--c-black);
-      background-clip: content-box;
-    }
-
-    @media (max-width: 768px) {
-      .footer-container { flex-direction: column; gap: 18px; text-align: center; }
-      .footer-left, .footer-right { flex-wrap: wrap; justify-content: center; }
-      .hero-section h1 { font-size: 2.8em; }
-      .input-group { padding: 30px; }
-      .generate-btn { padding: 22px 50px; font-size: 1.4em; }
-      .pdf-preview-content { padding: 15px; }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="bg" aria-hidden="true">
-    <canvas id="stars"></canvas>
-    <div class="hex"></div>
-  </div>
-
-  <div class="wrap">
-    <header id="header">
-      <div class="nav">
-        <div class="brand">
-          <div class="mark"></div>
-          <div>
-            <div class="name">ONE</div>
-            <span class="sub">Generador de Manuales PDF</span>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main>
-      <div class="container">
-        <div class="hero-section">
-          <h1>Generador de <span class="grad-cyan">Manuales Profesionales</span></h1>
-          <p>Crea documentos PDF de alta calidad con procesamiento inteligente de Markdown y diseño corporativo ONE</p>
-          <button class="prompt-btn" onclick="mostrarPrompt()">📋 Ver Prompt Recomendado</button>
-        </div>
-
-        <div class="form-wrapper">
-          <div class="input-group">
-            <h3>Portada del Manual</h3>
-            <label for="titulo">Titulo Principal*</label>
-            <input type="text" id="titulo" placeholder="Ej: Manual de Operaciones Logísticas" required>
-            <label for="proyecto">Subtitulo del Proyecto*</label>
-            <input type="text" id="proyecto" placeholder="Ej: Sistema de Gestión 2026">
-            <div class="info-box">
-              <h4>ℹ️ Información</h4>
-              <ul>
-                <li>Empresa: ONE (fijo)</li>
-                <li>Marca de agua en todas las páginas</li>
-                <li>Numeración automática</li>
-              </ul>
-            </div>
-          </div>
-          
-
-          <div class="input-group">
-            <h3>Estructura del Índice</h3>
-            <label for="indice">Índice Jerárquico (sin símbolos) *</label>
-            <textarea id="indice" placeholder="1. Introducción&#10;1.1. Antecedentes&#10;2. Desarrollo&#10;2.1. Implementación" required></textarea>
-            <div class="info-box">
-              <h4>🔍 Detección Automática</h4>
-              <ul>
-                <li>Números jerárquicos: 1., 1.1., 2.1.3.</li>
-                <li>Vinculación con contenido</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="input-group">
-            <h3>Contenido del Manual</h3>
-            <label for="contenido">Texto con Formato Markdown (con símbolos ##, **, *) *</label>
-            <textarea id="contenido" placeholder="## 1. Introducción&#10;&#10;Bienvenido al **Sistema ONE**...&#10;&#10;### 1.1. Antecedentes&#10;&#10;* Primera viñeta&#10;* Segunda viñeta&#10;&#10;---" required></textarea>
-            <div class="info-box">
-              <h4>💡 Formatos Soportados</h4>
-              <ul>
-                <li>## Capítulo | ### Sección</li>
-                <li>**negrita** | *cursiva*</li>
-                <li>* viñetas | 1. numeradas</li>
-                <li>--- separador</li>
-              </ul>
-            </div>
-          </div>
-
-          <div class="generate-section">
-            <button class="generate-btn" onclick="previsualizarPDF()" style="background: linear-gradient(135deg, var(--c-gold), var(--c-cyan));" id="previewBtn">👁️ Vista Previa del PDF</button>
-            <button class="generate-btn" onclick="generarPDF()" id="downloadBtn">✨ Generar y Descargar PDF</button>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <footer class="premium-footer">
-      <div class="footer-container">
-        <div class="footer-left">
-          <img src="./img/one-logoletra.png" alt="ONE" class="footer-logo-letra">
-          <span> | Todos los derechos reservados. © 2026</span>
-        </div>
-        <div class="footer-right">
-          <span class="developed-txt">Desarrollado por</span>
-          <a href="https://escencialconsultora.com.ar/" target="_blank" class="dev-link">
-            <img src="./img/one-logocolor.png" alt="ONE" class="dev-logo-one">
-            <span class="by-txt">by</span>
-            <img src="./img/escencial-logoblanco.png" alt="Escencial" class="dev-logo-escencial">
-          </a>
-        </div>
-      </div>
-    </footer>
-  </div>
-
-  <!-- Modal de Prompt -->
-  <div class="modal" id="promptModal">
-    <div class="modal-content">
-      <button class="modal-close" onclick="cerrarPrompt()">&times;</button>
-      <h3>📋 Prompt Recomendado (Click Aquí)</h3>
-      <div class="prompt-text" id="promptText" style="white-space: pre-wrap;">Rol: Actúa como un Expert Technical Writer especializado en Documentación Corporativa y Procesos.
-
-Objetivo: Redactar un manual de usuario MASIVO y EXHAUSTIVO (entre 3,500 y 7,000 palabras) para el sistema basado en los archivos adjuntos.
-
-⚠️ INSTRUCCIONES CRÍTICAS DE FORMATO (OBLIGATORIO):
-1. SALIDA EN BLOQUE DE CÓDIGO ÚNICO: Absolutamente toda tu respuesta (Título, Índice y Manual) debe estar contenida dentro de un único bloque de código Markdown.
-2. EXTENSIÓN Y CONTINUIDAD: Prohibido resumir. Extiéndete al máximo en cada explicación. Debes entregar el manual completo en un solo mensaje continuo.
-3. CERO EMOJIS: El tono debe ser estrictamente profesional y sobrio. No uses iconos.
-4. TABLAS EN CSV: No uses tablas visuales (Markdown grid). Si presentas datos estructurados, usa estrictamente formato CSV (Valores separados por comas).
-   * Ejemplo: Campo,Descripción,Acción
-
-⚠️ REGLAS DE ESTRUCTURA MARKDOWN:
-* ÍNDICE: Debe ser una lista numerada simple (1., 2., 3...). NO uses almohadillas (##) en el índice.
-* CUERPO DEL MANUAL: Aquí SÍ debes usar Markdown jerárquico que coincida con el índice:
-   * # Título Principal
-   * ## Título de Capítulo
-   * ### Subtítulo
-* Correspondencia: Los títulos en el cuerpo deben ser idénticos a los del índice.
-
-ESTRUCTURA A DESARROLLAR (Todo dentro del bloque de código):
-
-PASO 1: Encabezado
-Genera un Título Profesional y un Subtítulo descriptivo del proyecto.
-
-PASO 2: Índice Maestro
-Genera una lista numerada de al menos 8 capítulos (sin ##).
-
-PASO 3: Desarrollo del Contenido (Detalle Extremo)
-Desarrolla cada punto del índice con máxima profundidad:
-1. Introducción y Propuesta de Valor (Explica los beneficios de estandarización y diseño automático).
-2. Acceso y Requisitos (Navegadores, permisos de Google explicados sencillamente).
-3. Recorrido Visual (Describe cada sección de la interfaz: Cabecera, Paneles, Botones).
-4. Operación Paso a Paso (Guía minuciosa de llenado de formularios).
-5. Lógica del Sistema (OBLIGATORIO - FORMATO CSV):
-   * Debes explicar el proceso interno usando una tabla CSV con estas 3 columnas exactas:
-   * Columnas: Fase,Descripción Técnica,Efecto Visual
-   * Filas a cubrir: Captura de datos, Estructuración de texto, Detección de tablas.
-6. Gestión de Resultados (Descarga, nomenclatura de archivos, almacenamiento).
-7. Guía de Solución de Dudas (OBLIGATORIO - FORMATO CSV):
-   * Crea una lista de errores comunes en formato CSV con estas columnas:
-   * Columnas: Problema,Causa Probable,Solución
-8. Consejos de Eficiencia (Mejores prácticas para el usuario).
-
-¡Comienza ahora! Genera el manual completo, sin interrupciones, dentro del bloque de código.</div>
- <button class="copy-btn" id="copyBtn" onclick="copiarPrompt()">📋 Copiar Prompt</button>
-    </div>
-  </div>
-
-  <!-- Modal de Vista Previa PDF -->
-  <div class="pdf-preview-modal" id="pdfPreviewModal">
-    <div class="pdf-preview-content">
-      <div class="pdf-preview-header">
-        <h3>👁️ Vista Previa del PDF</h3>
-        <button class="pdf-preview-close" onclick="cerrarVistaPrevia()">✕ Cerrar</button>
-      </div>
-      
-      <div class="loading-spinner" id="loadingSpinner">
-        <div class="spinner"></div>
-        <p>Generando PDF... Por favor espere</p>
-      </div>
-      
-      <div class="pdf-preview-container" id="pdfContainer" style="display:none;">
-        <iframe id="pdfFrame"></iframe>
-      </div>
-    </div>
-  </div>
-
-<script>
-    // ═══════════════════════════════════════════════════════════════════
-    // 1. CONFIGURACIÓN CORREGIDA
-    // ═══════════════════════════════════════════════════════════════════
-    const CFG = {
-      PAGE_H: 297, PAGE_W: 210,
-      ML: 25, MR: 25, MT: 35, MB: 25,
-      get CW() { return 155; },
-      get Y_LIMIT() { return this.PAGE_H - (this.MB + 10); },
-      FONT: 'helvetica',
-      SIZES: {
-        H1: 16, H2: 13, BODY: 11, SMALL: 9,
-        INDEX_BIG: 14, INDEX_SMALL: 11
-      },
-      COLORS: {
-        BG_DARK: [20, 10, 30],
-        PINK: [225, 123, 215],
-        CYAN: [107, 225, 227],
-        PURPLE: [150, 100, 200],
-        DARK: [30, 30, 35],
-        GRAY: [128, 128, 128],
-        GOLD: [228, 199, 106],
-        WHITE: [255, 255, 255]
-      },
-      LINE_HEIGHT: 6, 
-      PARAGRAPH_GAP: 4
-    };
-
-    let pdfGenerado = null;
-    let imagenesCargadas = {};
-
-    // ═══════════════════════════════════════════════════════════════════
-    // PRECARGAR IMÁGENES
-    // ═══════════════════════════════════════════════════════════════════
-    async function precargarImagenes() {
-      const imagenes = {
-        fondoPortada: './img/pdf-fondoportada.jpg',
-        logoColor: './img/one-logocolor.png',
-        iconoNegro: './img/one-icononegro.png',
-        logoEscencial: './img/escencial-logoblanco.png',
-      };
-
-      const promesas = Object.entries(imagenes).map(([key, src]) => {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = () => {
-            imagenesCargadas[key] = src;
-            resolve();
-          };
-          img.onerror = () => {
-            console.warn(`No se pudo cargar: ${src}`);
-            imagenesCargadas[key] = null;
-            resolve();
-          };
-          img.src = src;
-        });
-      });
-
-      await Promise.all(promesas);
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 2. PARSER MEJORADO
-    // ═══════════════════════════════════════════════════════════════════
-    function parsearMarkdown(texto) {
-      const lineas = texto.split('\n');
-      const estructura = [];
-      let bufferTabla = { headers: [], rows: [] };
-      let enTabla = false;
-
-      const esCSV = (s) => {
-          const l = s.trim();
-          if (l.startsWith('*') || l.startsWith('-') || l.startsWith('#')) return false;
-          if (l.length < 5) return false;
-          const comas = (l.match(/,/g) || []).length;
-          if (l.startsWith('"')) return true;
-          if (comas >= 2) return true;
-          return false;
-      };
-
-      for (let i = 0; i < lineas.length; i++) {
-        const lineaRaw = lineas[i];
-        const lineaTrim = lineaRaw.trim();
-
-        const matchTitulo = lineaRaw.match(/^(#{1,6})\s*(?:(\d+(?:\.\d+)*|[A-Z]\.?)\s+)?(.+)$/);
-        if (matchTitulo) {
-          if(enTabla) { 
-            estructura.push({type: 'TABLA', data: bufferTabla}); 
-            bufferTabla = { headers: [], rows: [] };
-            enTabla = false; 
-          }
-          estructura.push({
-            type: 'TITULO',
-            nivel: matchTitulo[1].length,
-            numero: matchTitulo[2] || '',
-            texto: matchTitulo[3].trim()
-          });
-          continue;
-        }
-
-        const siguienteEsCSV = (i+1 < lineas.length) && esCSV(lineas[i+1]);
-        if (esCSV(lineaRaw) && (enTabla || siguienteEsCSV)) {
-           let partes = lineaTrim.split(',').map(t => t.trim().replace(/^"|"$/g, ''));
-           if (partes.length > 1) {
-             if (!enTabla) {
-               enTabla = true;
-               bufferTabla = { headers: partes, rows: [] };
-             } else {
-               bufferTabla.rows.push(partes);
-             }
-             continue;
-           }
-        }
-        if (enTabla && !esCSV(lineaRaw)) {
-           estructura.push({type: 'TABLA', data: bufferTabla});
-           bufferTabla = { headers: [], rows: [] };
-           enTabla = false;
-        }
-
-        const matchBullet = lineaRaw.match(/^\s*([\*\-\•])\s+(.+)/);
-        if (matchBullet) {
-          estructura.push({ type: 'LISTA_BULLET', texto: matchBullet[2].trim() });
-          continue;
-        }
-        const matchNum = lineaRaw.match(/^\s*(\d+\.)\s+(.+)/);
-        if (matchNum) {
-          estructura.push({ type: 'LISTA_NUM', numero: matchNum[1], texto: matchNum[2].trim() });
-          continue;
-        }
-
-        if (lineaTrim.length > 0 && !lineaTrim.startsWith('---')) {
-          estructura.push({ type: 'PARRAFO', texto: lineaRaw });
-        }
-      }
-      if(enTabla) estructura.push({type: 'TABLA', data: bufferTabla});
-      return estructura;
-    }
-
-// ═══════════════════════════════════════════════════════════════════
-    // 3. MOTOR GRÁFICO
-    // ═══════════════════════════════════════════════════════════════════
+  <!doctype html>
+  <html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ONE - Generador de Manuales PDF Profesional</title>
+
+    <link rel="icon" type="image/png" href="./img/favicon.png" sizes="32x32">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600;700;800&display=swap" rel="stylesheet">
     
-    let cursorY = CFG.MT;
-    let numPagina = 2; 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 
-    function dibujarFondoPagina(doc) {
-        // 1. Marca de agua (Logo)
-        if (imagenesCargadas.iconoNegro) {
-          try {
-            doc.saveGraphicsState();
-            doc.setGState(new doc.GState({ opacity: 0.08 }));
-            const size = 130;
-            doc.addImage(imagenesCargadas.iconoNegro, 'PNG', (CFG.PAGE_W - size)/2, (CFG.PAGE_H - size)/2, size, size);
-            doc.restoreGraphicsState();
-          } catch (e) {
-            console.warn("Error añadiendo marca de agua");
+    <style>
+      :root {
+        --c-black: #000000;
+        --c-ink: #1a181d;
+        --c-white: #fefeff;
+        --c-pink: #e17bd7;
+        --c-cyan: #6be1e3;
+        --c-gold: #e4c76a;
+        --c-slate: #a4a8c0;
+        --c-mist: #c6c9d7;
+        --font-title: "Exo 2", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        --font-sub: "Futura", "Futura PT", "Avenir", "Trebuchet MS", "Segoe UI", Arial, sans-serif;
+        --container: 1200px;
+        --radius-xl: 28px;
+        --radius-lg: 18px;
+        --shadow-soft: 0 18px 60px rgba(0,0,0,.55);
+        --glass: rgba(254,254,255,.08);
+        --stroke: rgba(198,201,215,.25);
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html {
+        height: 100%;
+        scrollbar-width: thin;
+        scrollbar-color: var(--c-pink) var(--c-black);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        background-color: var(--c-black);
+        color: var(--c-white);
+        font-family: var(--font-sub);
+        overflow-x: hidden;
+        line-height: 1.6;
+      }
+
+      a { color: inherit; text-decoration: none; }
+      img { max-width: 100%; display: block; }
+
+      .bg {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background: 
+          radial-gradient(1200px 700px at 70% 25%, rgba(225,123,215,.18), transparent 55%),
+          radial-gradient(1100px 700px at 80% 60%, rgba(107,225,227,.14), transparent 55%),
+          radial-gradient(900px 600px at 20% 70%, rgba(228,199,106,.10), transparent 60%),
+          linear-gradient(180deg, var(--c-black), var(--c-ink));
+      }
+
+      .bg::before {
+        content: "";
+        position: absolute;
+        inset: -10%;
+        background:
+          radial-gradient(circle at 25% 20%, rgba(107,225,227,.12), transparent 40%),
+          radial-gradient(circle at 80% 35%, rgba(225,123,215,.12), transparent 38%),
+          radial-gradient(circle at 55% 85%, rgba(228,199,106,.10), transparent 45%);
+        filter: blur(18px);
+        opacity: .95;
+      }
+
+      .hex {
+        position: absolute;
+        inset: -20%;
+        opacity: .16;
+        filter: drop-shadow(0 0 12px rgba(107,225,227,.15));
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='150'%3E%3Cg fill='none' stroke='%23c6c9d7' stroke-opacity='0.85' stroke-width='1'%3E%3Cpath d='M50 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M120 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M190 20l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M85 55l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M155 55l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M50 90l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M120 90l20-12 20 12v24l-20 12-20-12z'/%3E%3Cpath d='M190 90l20-12 20 12v24l-20 12-20-12z'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: 260px 150px;
+        transform: rotate(-8deg);
+        mix-blend-mode: screen;
+      }
+
+      canvas#stars { position: absolute; inset: 0; }
+
+      .wrap {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 100vh;
+      }
+
+      header {
+        width: 100%;
+        padding: 26px 22px 8px;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: linear-gradient(180deg, rgba(0,0,0,.35), transparent);
+        backdrop-filter: blur(10px);
+      }
+
+      header.scrolled {
+        background: rgba(0,0,0,.7);
+        box-shadow: 0 10px 30px rgba(0,0,0,.35);
+        border-bottom: 1px solid rgba(198,201,215,.10);
+      }
+
+      .nav {
+        max-width: var(--container);
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        user-select: none;
+      }
+
+      .brand .mark {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-image: url('./img/one-iconocolor.png');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        box-shadow: 0 0 0 1px rgba(198,201,215,.18), 0 0 40px rgba(107,225,227,.18);
+        position: relative;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+
+      .brand .mark::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 30% 30%, rgba(254,254,255,.14), transparent 55%);
+        pointer-events: none;
+      }
+
+      .brand .name {
+        font-family: var(--font-title);
+        letter-spacing: .04em;
+        font-weight: 800;
+        font-size: 24px;
+        line-height: 1.1;
+      }
+
+      .brand .sub {
+        display: block;
+        font-family: var(--font-sub);
+        font-weight: 500;
+        font-size: 13px;
+        color: rgba(198,201,215,.85);
+        letter-spacing: .02em;
+        margin-top: 2px;
+      }
+
+      main {
+        flex: 1;
+        width: 100%;
+        padding: 60px 30px 100px;
+      }
+
+      .container {
+        max-width: var(--container);
+        margin: 0 auto;
+      }
+
+      .hero-section {
+        text-align: center;
+        margin-bottom: 80px;
+      }
+
+      .hero-section h1 {
+        font-family: var(--font-title);
+        font-size: clamp(48px, 6vw, 72px);
+        line-height: 1.1;
+        margin: 0 0 30px;
+        letter-spacing: -.02em;
+        text-shadow: 0 10px 40px rgba(0,0,0,.55);
+      }
+
+      .grad-cyan {
+        background: linear-gradient(90deg, var(--c-cyan), rgba(107,225,227,.65));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .hero-section p {
+        max-width: 800px;
+        margin: 0 auto 40px;
+        font-size: 20px;
+        line-height: 1.8;
+        color: rgba(198,201,215,.95);
+      }
+
+      .prompt-btn {
+        background: linear-gradient(135deg, var(--c-gold), var(--c-pink));
+        color: var(--c-white);
+        padding: 16px 40px;
+        border: none;
+        border-radius: 999px;
+        font-size: 1.1em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 10px 30px rgba(228,199,106,.4);
+        font-family: var(--font-title);
+        margin-bottom: 30px;
+      }
+
+      .prompt-btn:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 50px rgba(228,199,106,.6);
+      }
+
+      .form-wrapper {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 40px;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+
+      .input-group {
+        background: var(--glass);
+        backdrop-filter: blur(20px);
+        border: 1px solid var(--stroke);
+        border-radius: var(--radius-lg);
+        padding: 40px;
+        box-shadow: var(--shadow-soft);
+        transition: all 0.3s;
+      }
+
+      .input-group:hover {
+        border-color: rgba(107,225,227,.35);
+        box-shadow: 0 25px 70px rgba(0,0,0,.65);
+      }
+
+      .input-group h3 {
+        font-family: var(--font-title);
+        font-size: 1.8em;
+        font-weight: 800;
+        margin-bottom: 25px;
+        color: var(--c-white);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .input-group h3::before {
+        content: '▸';
+        color: var(--c-cyan);
+        font-size: 1.3em;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 12px;
+        color: var(--c-slate);
+        font-weight: 600;
+        font-size: 1em;
+        font-family: var(--font-title);
+      }
+
+      input[type="text"], textarea {
+        width: 100%;
+        padding: 18px;
+        background: rgba(0,0,0,.5);
+        border: 1px solid var(--stroke);
+        border-radius: 14px;
+        color: var(--c-white);
+        font-family: var(--font-sub);
+        font-size: 16px;
+        margin-bottom: 25px;
+        transition: all 0.3s;
+      }
+
+      input[type="text"]:focus, textarea:focus {
+        outline: none;
+        border-color: var(--c-cyan);
+        box-shadow: 0 0 30px rgba(107,225,227,.35);
+        background: rgba(0,0,0,.7);
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 250px;
+        font-family: 'Courier New', monospace;
+        line-height: 1.7;
+      }
+
+      textarea#contenido { min-height: 600px; }
+
+      ::placeholder {
+        color: var(--c-slate);
+        opacity: 0.5;
+      }
+
+      .info-box {
+        background: rgba(107,225,227,.08);
+        border-left: 4px solid var(--c-cyan);
+        border-radius: 12px;
+        padding: 25px;
+        margin-top: 20px;
+        color: var(--c-cyan);
+      }
+
+      .info-box h4 {
+        margin-bottom: 15px;
+        font-size: 1.15em;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-family: var(--font-title);
+      }
+
+      .info-box ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+      }
+
+      .info-box li {
+        padding: 8px 0;
+        font-size: 0.95em;
+        color: var(--c-mist);
+        line-height: 1.6;
+      }
+
+      .info-box li::before {
+        content: "✓ ";
+        color: var(--c-gold);
+        font-weight: bold;
+        margin-right: 10px;
+      }
+
+      .generate-section {
+        text-align: center;
+        margin-top: 60px;
+        padding: 40px 0;
+      }
+
+      .generate-btn {
+        background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
+        color: var(--c-white);
+        padding: 28px 80px;
+        border: none;
+        border-radius: 999px;
+        font-size: 1.8em;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 20px 50px rgba(107,225,227,.5);
+        font-family: var(--font-title);
+        position: relative;
+        overflow: hidden;
+        margin: 10px;
+      }
+
+      .generate-btn:hover {
+        transform: translateY(-6px) scale(1.05);
+        box-shadow: 0 30px 70px rgba(225,123,215,.7);
+      }
+
+      .generate-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.85);
+        backdrop-filter: blur(12px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal.active { display: flex; }
+
+      .modal-content {
+        background: var(--c-ink);
+        border: 2px solid var(--stroke);
+        border-radius: var(--radius-xl);
+        padding: 50px;
+        max-width: 800px;
+        width: 90%;
+        box-shadow: var(--shadow-soft);
+        position: relative;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: none;
+        border: none;
+        color: var(--c-mist);
+        font-size: 36px;
+        cursor: pointer;
+        transition: color 0.3s;
+      }
+
+      .modal-close:hover { color: var(--c-white); }
+
+      .modal h3 {
+        font-size: 2.2em;
+        margin-bottom: 25px;
+        background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: var(--font-title);
+      }
+
+      .prompt-text {
+        background: rgba(0,0,0,.5);
+        border: 1px solid var(--stroke);
+        border-radius: 14px;
+        padding: 25px;
+        font-family: 'Courier New', monospace;
+        color: var(--c-cyan);
+        font-size: 1em;
+        line-height: 1.9;
+        margin-bottom: 25px;
+        max-height: 450px;
+        overflow-y: auto;
+      }
+
+      .copy-btn {
+        background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
+        color: var(--c-white);
+        padding: 18px 45px;
+        border: none;
+        border-radius: 999px;
+        font-size: 1.2em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 10px 35px rgba(107,225,227,.35);
+        font-family: var(--font-title);
+        width: 100%;
+      }
+
+      .copy-btn:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 50px rgba(107,225,227,.6);
+      }
+
+      .copy-btn.copied {
+        background: linear-gradient(135deg, var(--c-gold), var(--c-pink));
+      }
+
+      /* Modal de Vista Previa PDF */
+      .pdf-preview-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.95);
+        backdrop-filter: blur(12px);
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .pdf-preview-modal.active { display: flex; }
+
+      .pdf-preview-content {
+        background: var(--c-ink);
+        border: 2px solid var(--stroke);
+        border-radius: var(--radius-xl);
+        padding: 30px;
+        width: 95%;
+        max-width: 1200px;
+        height: 90vh;
+        box-shadow: var(--shadow-soft);
+        position: relative;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .pdf-preview-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--stroke);
+      }
+
+      .pdf-preview-header h3 {
+        font-size: 1.8em;
+        background: linear-gradient(135deg, var(--c-cyan), var(--c-pink));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-family: var(--font-title);
+        margin: 0;
+      }
+
+      .pdf-preview-close {
+        background: rgba(225,123,215,.2);
+        border: 1px solid var(--c-pink);
+        color: var(--c-white);
+        padding: 10px 25px;
+        border-radius: 999px;
+        font-size: 1em;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-family: var(--font-title);
+      }
+
+      .pdf-preview-close:hover {
+        background: var(--c-pink);
+        transform: translateY(-2px);
+      }
+
+      .pdf-preview-container {
+        flex: 1;
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+        background: #2a2a2a;
+      }
+
+      .pdf-preview-container iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: var(--radius-lg);
+      }
+
+      .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 40px;
+      }
+
+      .loading-spinner.active {
+        display: block;
+      }
+
+      .spinner {
+        border: 4px solid rgba(107,225,227,.2);
+        border-top: 4px solid var(--c-cyan);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .loading-spinner p {
+        color: var(--c-cyan);
+        font-size: 1.2em;
+        font-weight: 600;
+      }
+
+      .premium-footer {
+        width: 100%;
+        margin-top: auto;
+        flex-shrink: 0;
+        border-top: 3px solid #ff69b4;
+        background: #000000 !important;
+        padding: 22px 0;
+        color: #ffffff;
+        font-size: 14px;
+        z-index: 10;
+      }
+
+      .footer-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        opacity: 0.9;
+      }
+
+      .footer-logo-letra {
+        height: 20px;
+        width: auto;
+      }
+
+      .footer-right {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .developed-txt {
+        font-size: 13px;
+        opacity: 0.75;
+      }
+
+      .dev-link {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      .dev-link:hover {
+        opacity: 0.85;
+        transform: translateY(-2px);
+      }
+
+      .dev-logo-one { height: 24px; width: auto; }
+      .by-txt { margin: 0 8px; font-style: italic; opacity: 0.75; font-size: 14px; }
+      .dev-logo-escencial { height: 26px; width: auto; }
+
+      ::-webkit-scrollbar { width: 12px; }
+      ::-webkit-scrollbar-track { background: var(--c-black); }
+      ::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, var(--c-cyan), var(--c-pink));
+        border-radius: 99px;
+        border: 3px solid var(--c-black);
+        background-clip: content-box;
+      }
+
+      @media (max-width: 768px) {
+        .footer-container { flex-direction: column; gap: 18px; text-align: center; }
+        .footer-left, .footer-right { flex-wrap: wrap; justify-content: center; }
+        .hero-section h1 { font-size: 2.8em; }
+        .input-group { padding: 30px; }
+        .generate-btn { padding: 22px 50px; font-size: 1.4em; }
+        .pdf-preview-content { padding: 15px; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="bg" aria-hidden="true">
+      <canvas id="stars"></canvas>
+      <div class="hex"></div>
+    </div>
+
+    <div class="wrap">
+      <header id="header">
+        <div class="nav">
+          <div class="brand">
+            <div class="mark"></div>
+            <div>
+              <div class="name">ONE</div>
+              <span class="sub">Generador de Manuales PDF</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <div class="container">
+          <div class="hero-section">
+            <h1>Generador de <span class="grad-cyan">Manuales Profesionales</span></h1>
+            <p>Crea documentos PDF de alta calidad con procesamiento inteligente de Markdown y diseño corporativo ONE</p>
+            <button class="prompt-btn" onclick="mostrarPrompt()">📋 Ver Prompt Recomendado</button>
+          </div>
+
+          <div class="form-wrapper">
+            <div class="input-group">
+              <h3>Portada del Manual</h3>
+              <label for="titulo">Titulo Principal*</label>
+              <input type="text" id="titulo" placeholder="Ej: Manual de Operaciones Logísticas" required>
+              <label for="proyecto">Subtitulo del Proyecto*</label>
+              <input type="text" id="proyecto" placeholder="Ej: Sistema de Gestión 2026">
+              <div class="info-box">
+                <h4>ℹ️ Información</h4>
+                <ul>
+                  <li>Empresa: ONE (fijo)</li>
+                  <li>Marca de agua en todas las páginas</li>
+                  <li>Numeración automática</li>
+                </ul>
+              </div>
+            </div>
+            
+
+            <div class="input-group">
+              <h3>Estructura del Índice</h3>
+              <label for="indice">Índice Jerárquico (sin símbolos) *</label>
+              <textarea id="indice" placeholder="1. Introducción&#10;1.1. Antecedentes&#10;2. Desarrollo&#10;2.1. Implementación" required></textarea>
+              <div class="info-box">
+                <h4>🔍 Detección Automática</h4>
+                <ul>
+                  <li>Números jerárquicos: 1., 1.1., 2.1.3.</li>
+                  <li>Vinculación con contenido</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <h3>Contenido del Manual</h3>
+              <label for="contenido">Texto con Formato Markdown (con símbolos ##, **, *) *</label>
+              <textarea id="contenido" placeholder="## 1. Introducción&#10;&#10;Bienvenido al **Sistema ONE**...&#10;&#10;### 1.1. Antecedentes&#10;&#10;* Primera viñeta&#10;* Segunda viñeta&#10;&#10;---" required></textarea>
+              <div class="info-box">
+                <h4>💡 Formatos Soportados</h4>
+                <ul>
+                  <li>## Capítulo | ### Sección</li>
+                  <li>**negrita** | *cursiva*</li>
+                  <li>* viñetas | 1. numeradas</li>
+                  <li>--- separador</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="generate-section">
+              <button class="generate-btn" onclick="previsualizarPDF()" style="background: linear-gradient(135deg, var(--c-gold), var(--c-cyan));" id="previewBtn">👁️ Vista Previa del PDF</button>
+              <button class="generate-btn" onclick="generarPDF()" id="downloadBtn">✨ Generar y Descargar PDF</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <footer class="premium-footer">
+        <div class="footer-container">
+          <div class="footer-left">
+            <img src="./img/one-logoletra.png" alt="ONE" class="footer-logo-letra">
+            <span> | Todos los derechos reservados. © 2026</span>
+          </div>
+          <div class="footer-right">
+            <span class="developed-txt">Desarrollado por</span>
+            <a href="https://escencialconsultora.com.ar/" target="_blank" class="dev-link">
+              <img src="./img/one-logocolor.png" alt="ONE" class="dev-logo-one">
+              <span class="by-txt">by</span>
+              <img src="./img/escencial-logoblanco.png" alt="Escencial" class="dev-logo-escencial">
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Modal de Prompt -->
+    <div class="modal" id="promptModal">
+      <div class="modal-content">
+        <button class="modal-close" onclick="cerrarPrompt()">&times;</button>
+        <h3>📋 Prompt Recomendado (Click Aquí)</h3>
+        <div class="prompt-text" id="promptText" style="white-space: pre-wrap;">Rol: Actúa como un Expert Technical Writer especializado en Documentación Corporativa y Procesos.
+
+  Objetivo: Redactar un manual de usuario MASIVO y EXHAUSTIVO (entre 3,500 y 7,000 palabras) para el sistema basado en los archivos adjuntos.
+
+  ⚠️ INSTRUCCIONES CRÍTICAS DE FORMATO (OBLIGATORIO):
+  1. SALIDA EN BLOQUE DE CÓDIGO ÚNICO: Absolutamente toda tu respuesta (Título, Índice y Manual) debe estar contenida dentro de un único bloque de código Markdown.
+  2. EXTENSIÓN Y CONTINUIDAD: Prohibido resumir. Extiéndete al máximo en cada explicación. Debes entregar el manual completo en un solo mensaje continuo.
+  3. CERO EMOJIS: El tono debe ser estrictamente profesional y sobrio. No uses iconos.
+  4. TABLAS EN CSV: No uses tablas visuales (Markdown grid). Si presentas datos estructurados, usa estrictamente formato CSV (Valores separados por comas).
+    * Ejemplo: Campo,Descripción,Acción
+
+  ⚠️ REGLAS DE ESTRUCTURA MARKDOWN:
+  * ÍNDICE: Debe ser una lista numerada simple (1., 2., 3...). NO uses almohadillas (##) en el índice.
+  * CUERPO DEL MANUAL: Aquí SÍ debes usar Markdown jerárquico que coincida con el índice:
+    * # Título Principal
+    * ## Título de Capítulo
+    * ### Subtítulo
+  * Correspondencia: Los títulos en el cuerpo deben ser idénticos a los del índice.
+
+  ESTRUCTURA A DESARROLLAR (Todo dentro del bloque de código):
+
+  PASO 1: Encabezado
+  Genera un Título Profesional y un Subtítulo descriptivo del proyecto.
+
+  PASO 2: Índice Maestro
+  Genera una lista numerada de al menos 8 capítulos (sin ##).
+
+  PASO 3: Desarrollo del Contenido (Detalle Extremo)
+  Desarrolla cada punto del índice con máxima profundidad:
+  1. Introducción y Propuesta de Valor (Explica los beneficios de estandarización y diseño automático).
+  2. Acceso y Requisitos (Navegadores, permisos de Google explicados sencillamente).
+  3. Recorrido Visual (Describe cada sección de la interfaz: Cabecera, Paneles, Botones).
+  4. Operación Paso a Paso (Guía minuciosa de llenado de formularios).
+  5. Lógica del Sistema (OBLIGATORIO - FORMATO CSV):
+    * Debes explicar el proceso interno usando una tabla CSV con estas 3 columnas exactas:
+    * Columnas: Fase,Descripción Técnica,Efecto Visual
+    * Filas a cubrir: Captura de datos, Estructuración de texto, Detección de tablas.
+  6. Gestión de Resultados (Descarga, nomenclatura de archivos, almacenamiento).
+  7. Guía de Solución de Dudas (OBLIGATORIO - FORMATO CSV):
+    * Crea una lista de errores comunes en formato CSV con estas columnas:
+    * Columnas: Problema,Causa Probable,Solución
+  8. Consejos de Eficiencia (Mejores prácticas para el usuario).
+
+  ¡Comienza ahora! Genera el manual completo, sin interrupciones, dentro del bloque de código.</div>
+  <button class="copy-btn" id="copyBtn" onclick="copiarPrompt()">📋 Copiar Prompt</button>
+      </div>
+    </div>
+
+    <!-- Modal de Vista Previa PDF -->
+    <div class="pdf-preview-modal" id="pdfPreviewModal">
+      <div class="pdf-preview-content">
+        <div class="pdf-preview-header">
+          <h3>👁️ Vista Previa del PDF</h3>
+          <button class="pdf-preview-close" onclick="cerrarVistaPrevia()">✕ Cerrar</button>
+        </div>
+        
+        <div class="loading-spinner" id="loadingSpinner">
+          <div class="spinner"></div>
+          <p>Generando PDF... Por favor espere</p>
+        </div>
+        
+        <div class="pdf-preview-container" id="pdfContainer" style="display:none;">
+          <iframe id="pdfFrame"></iframe>
+        </div>
+      </div>
+    </div>
+
+  <script>
+      // ═══════════════════════════════════════════════════════════════════
+      // 1. CONFIGURACIÓN OPTIMIZADA
+      // ═══════════════════════════════════════════════════════════════════
+      const CFG = {
+        PAGE_H: 297, PAGE_W: 210,
+        ML: 25, MR: 25, MT: 35, MB: 25,
+        get CW() { return 155; }, // ✅ Reducido a 155mm para tablas seguras
+        get Y_LIMIT() { return this.PAGE_H - (this.MB + 10); },
+        FONT: 'helvetica',
+        SIZES: {
+          H1: 16, H2: 13, BODY: 11, SMALL: 9,
+          INDEX_BIG: 14, INDEX_SMALL: 11
+        },
+        COLORS: {
+          BG_DARK: [20, 10, 30],
+          PINK: [225, 123, 215],
+          CYAN: [107, 225, 227],
+          PURPLE: [150, 100, 200],
+          DARK: [30, 30, 35],
+          GRAY: [128, 128, 128],
+          GOLD: [228, 199, 106],
+          WHITE: [255, 255, 255]
+        },
+        LINE_HEIGHT: 6, 
+        PARAGRAPH_GAP: 4
+      };
+
+      let pdfGenerado = null;
+      let imagenesCargadas = {};
+
+      // ═══════════════════════════════════════════════════════════════════
+      // PRECARGAR IMÁGENES
+      // ═══════════════════════════════════════════════════════════════════
+      async function precargarImagenes() {
+        const imagenes = {
+          fondoPortada: { src: './img/pdf-fondoportada.jpg', formato: 'JPEG' },
+          logoColor: { src: './img/one-logocolor.png', formato: 'PNG' },
+          iconoNegro: { src: './img/one-icononegro.png', formato: 'PNG' },
+          logoEscencial: { src: './img/escencial-logoblanco.png', formato: 'PNG' },
+          contraportada: { src: './img/pdf-contraportada.jpg', formato: 'JPEG' },
+        };
+
+        const promesas = Object.entries(imagenes).map(([key, config]) => {
+          return new Promise((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                const mimeType = config.formato === 'JPEG' ? 'image/jpeg' : 'image/png';
+                imagenesCargadas[key] = {
+                  data: canvas.toDataURL(mimeType, 0.95),
+                  formato: config.formato
+                };
+              } catch(e) {
+                console.warn(`Error convirtiendo ${key}:`, e);
+                imagenesCargadas[key] = null;
+              }
+              resolve();
+            };
+            img.onerror = () => {
+              console.warn(`No se pudo cargar: ${config.src}`);
+              imagenesCargadas[key] = null;
+              resolve();
+            };
+            img.src = config.src;
+          });
+        });
+
+        await Promise.all(promesas);
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // 2. PARSER ULTRA MEJORADO - DETECCIÓN ABSOLUTA
+      // ═══════════════════════════════════════════════════════════════════
+      function parsearMarkdown(texto) {
+        const lineas = texto.split('\n');
+        const estructura = [];
+        let bufferTabla = { headers: [], rows: [] };
+        let enTabla = false;
+
+        const esCSV = (s) => {
+            const l = s.trim();
+            if (l.startsWith('*') || l.startsWith('-') || l.startsWith('#')) return false;
+            if (l.length < 5) return false;
+            const comas = (l.match(/,/g) || []).length;
+            if (l.startsWith('"')) return true;
+            if (comas >= 2) return true;
+            return false;
+        };
+
+ // ✅ DETECCIÓN NUCLEAR DE TÍTULOS NUMÉRICOS - VERSIÓN CORREGIDA
+function detectarTituloNumerico(linea) {
+  // Limpieza extrema
+  let limpia = linea
+    .replace(/[\u00A0\u200B\u2060\uFEFF\u180E\u202F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Quitar TODOS los formatos (negritas, cursivas)
+  let sinFormato = limpia
+    .replace(/\*\*/g, '')
+    .replace(/__/g, '')
+    .replace(/\*/g, '')
+    .replace(/_/g, '')
+    .trim();
+  
+  // ✅ REGEX MEJORADO - Acepta cualquier combinación de números con puntos
+  // Ejemplos: "9.3", "9.4", "10.1", "1.2.3"
+  const patron = /^(\d+(?:\.\d+)+)\.?\s+(.+)$/;
+  const match = sinFormato.match(patron);
+  
+  if (match) {
+    const numero = match[1];
+    const texto = match[2];
+    
+    // Calcular nivel según cantidad de puntos
+    const puntos = (numero.match(/\./g) || []).length;
+    let nivel = Math.min(puntos + 1, 6); // Nivel 2-6 (### o más)
+    
+    // ✅ FORZAR nivel 3 (###) para subtítulos como 9.3, 10.1
+    if (puntos === 1) {
+      nivel = 3; // ### (subtítulo rosa)
+    }
+    
+    console.log(`✅ DETECTADO: "${numero}" → Nivel ${nivel} → "${texto}"`);
+    
+    return {
+      esDetectado: true,
+      nivel: nivel,
+      numero: numero,
+      texto: texto
+    };
+  }
+  
+  return { esDetectado: false };
+}
+        for (let i = 0; i < lineas.length; i++) {
+          const lineaRaw = lineas[i];
+          let lineaLimpia = lineaRaw.replace(/[\u00A0\u200B\u2060\uFEFF]/g, ' ').trim();
+
+// 1️⃣ Hashtags estándar - REGEX MEJORADO
+let matchHashtag = lineaLimpia.match(/^(#{1,6})\s+((?:\d+(?:\.\d+)*\.?\s+)?)(.*)/);
+
+if (matchHashtag) {
+    if(enTabla) { 
+        estructura.push({type: 'TABLA', data: bufferTabla}); 
+        bufferTabla = { headers: [], rows: [] };
+        enTabla = false; 
+    }
+    const numero = matchHashtag[2] ? matchHashtag[2].trim() : '';
+    const texto = matchHashtag[3].trim();
+    estructura.push({
+        type: 'TITULO',
+        nivel: matchHashtag[1].length,
+        numero: numero,
+        texto: texto
+    });
+    continue;
+}
+
+          // 2️⃣ Detección numérica ULTRA ROBUSTA
+          const deteccionNumerica = detectarTituloNumerico(lineaLimpia);
+          
+          if (deteccionNumerica.esDetectado) {
+            if(enTabla) { 
+              estructura.push({type: 'TABLA', data: bufferTabla}); 
+              bufferTabla = { headers: [], rows: [] };
+              enTabla = false; 
+            }
+            estructura.push({
+              type: 'TITULO',
+              nivel: deteccionNumerica.nivel,
+              numero: deteccionNumerica.numero,
+              texto: deteccionNumerica.texto
+            });
+            continue;
+          }
+
+          // 3️⃣ CSV
+          const siguienteEsCSV = (i+1 < lineas.length) && esCSV(lineas[i+1]);
+          if (esCSV(lineaRaw) && (enTabla || siguienteEsCSV)) {
+            let partes = lineaLimpia.split(',').map(t => t.trim().replace(/^"|"$/g, ''));
+            if (partes.length > 1) {
+              if (!enTabla) {
+                enTabla = true;
+                bufferTabla = { headers: partes, rows: [] };
+              } else {
+                bufferTabla.rows.push(partes);
+              }
+              continue;
+            }
+          }
+          
+          if (enTabla && !esCSV(lineaRaw)) {
+            estructura.push({type: 'TABLA', data: bufferTabla});
+            bufferTabla = { headers: [], rows: [] };
+            enTabla = false;
+          }
+
+          // 4️⃣ Listas
+          const matchBullet = lineaLimpia.match(/^([\*\-\•])\s+(.+)/);
+          if (matchBullet) {
+            estructura.push({ type: 'LISTA_BULLET', texto: matchBullet[2].trim() });
+            continue;
+          }
+          
+          const matchNum = lineaLimpia.match(/^(\d+\.)\s+(.+)/);
+          if (matchNum) {
+            estructura.push({ type: 'LISTA_NUM', numero: matchNum[1], texto: matchNum[2].trim() });
+            continue;
+          }
+
+          // 5️⃣ Párrafos
+          if (lineaLimpia.length > 0 && !lineaLimpia.startsWith('---')) {
+            estructura.push({ type: 'PARRAFO', texto: lineaRaw });
           }
         }
-
-        // 2. Obtener el título del usuario para el pie de página
-        const inputTitulo = document.getElementById('titulo');
-        const tituloUsuario = inputTitulo ? inputTitulo.value : '';
-        // Si hay texto usa el del usuario, si no, usa el default
-        const textoPie = tituloUsuario ? tituloUsuario : 'ONE Manual Profesional';
-
-        // 3. Dibujar Pie de Página
-        const fy = 285;
-        doc.setDrawColor(...CFG.COLORS.PINK);
-        doc.setLineWidth(1);
-        doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
         
-        doc.setFontSize(9);
-        doc.setTextColor(...CFG.COLORS.DARK);
-        doc.setFont(CFG.FONT, 'italic');
-        doc.text(textoPie, CFG.ML, fy); // Texto dinámico
+        if(enTabla) estructura.push({type: 'TABLA', data: bufferTabla});
+        return estructura;
+      }
 
-        doc.setFont(CFG.FONT, 'bold');
-        doc.text(`Página ${numPagina}`, CFG.PAGE_W - CFG.MR, fy, { align: 'right' });
+      // ═══════════════════════════════════════════════════════════════════
+      // 3. MOTOR GRÁFICO
+      // ═══════════════════════════════════════════════════════════════════
+      
+      let cursorY = CFG.MT;
+      let numPagina = 2; 
+
+      function dibujarFondoPagina(doc) {
+          if (imagenesCargadas.iconoNegro && imagenesCargadas.iconoNegro.data) {
+            try {
+              doc.saveGraphicsState();
+              doc.setGState(new doc.GState({ opacity: 0.08 }));
+              const size = 130;
+              doc.addImage(imagenesCargadas.iconoNegro.data, imagenesCargadas.iconoNegro.formato, (CFG.PAGE_W - size)/2, (CFG.PAGE_H - size)/2, size, size);
+              doc.restoreGraphicsState();
+            } catch (e) {
+              console.warn("Error añadiendo marca de agua");
+            }
+          }
+
+          const inputTitulo = document.getElementById('titulo');
+          const tituloUsuario = inputTitulo ? inputTitulo.value : '';
+          const textoPie = tituloUsuario ? tituloUsuario : 'ONE Manual Profesional';
+
+          const fy = 285;
+          doc.setDrawColor(...CFG.COLORS.PINK);
+          doc.setLineWidth(1);
+          doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
+          
+          doc.setFontSize(9);
+          doc.setTextColor(...CFG.COLORS.DARK);
+          doc.setFont(CFG.FONT, 'italic');
+          doc.text(textoPie, CFG.ML, fy);
+
+          doc.setFont(CFG.FONT, 'bold');
+          doc.text(`Página ${numPagina}`, CFG.PAGE_W - CFG.MR, fy, { align: 'right' });
+      }
+
+      function verificarEspacio(doc, alturaRequerida) {
+          if (cursorY + alturaRequerida > CFG.Y_LIMIT) {
+              doc.addPage();
+              numPagina++;
+              dibujarFondoPagina(doc);
+              cursorY = CFG.MT;
+              return true;
+          }
+          return false;
+      }
+
+      function escribirParrafo(doc, texto, fontSize, indent = 0, color = CFG.COLORS.DARK, fontStyle = 'normal') {
+          const anchoDisponible = CFG.CW - indent;
+          const startX = CFG.ML + indent;
+          
+          const aplicarEstilos = () => {
+              doc.setFontSize(fontSize);
+              doc.setTextColor(...color);
+              doc.setFont(CFG.FONT, fontStyle);
+          };
+          aplicarEstilos(); 
+
+          const partes = texto.split(/(\*\*.*?\*\*)/g);
+          let palabras = [];
+          
+          partes.forEach(parte => {
+              if(!parte) return;
+              const esBold = parte.startsWith('**') && parte.endsWith('**');
+              const limpio = esBold ? parte.replace(/\*\*/g, '') : parte;
+              const sub = limpio.split(/(\s+)/);
+              sub.forEach(p => { if(p) palabras.push({ txt: p, bold: esBold }); });
+          });
+
+          let lineaActual = [];
+          let anchoLineaActual = 0;
+
+          palabras.forEach(pal => {
+              const estiloToken = pal.bold ? 'bold' : fontStyle;
+              doc.setFont(CFG.FONT, estiloToken);
+              const w = doc.getTextWidth(pal.txt);
+
+              if (anchoLineaActual + w <= anchoDisponible) {
+                  lineaActual.push({ ...pal, w: w, style: estiloToken });
+                  anchoLineaActual += w;
+              } else {
+                  if (!pal.txt.trim()) return;
+
+                  const huboSalto = verificarEspacio(doc, CFG.LINE_HEIGHT);
+                  if (huboSalto) aplicarEstilos();
+
+                  let x = startX;
+                  lineaActual.forEach(item => {
+                      doc.setFont(CFG.FONT, item.style);
+                      doc.text(item.txt, x, cursorY);
+                      x += item.w;
+                  });
+                  
+                  cursorY += CFG.LINE_HEIGHT;
+                  lineaActual = [{ ...pal, w: w, style: estiloToken }];
+                  anchoLineaActual = w;
+              }
+          });
+
+          if (lineaActual.length > 0) {
+              const huboSalto = verificarEspacio(doc, CFG.LINE_HEIGHT);
+              if (huboSalto) aplicarEstilos();
+              
+              let x = startX;
+              lineaActual.forEach(item => {
+                  doc.setFont(CFG.FONT, item.style);
+                  doc.text(item.txt, x, cursorY);
+                  x += item.w;
+              });
+              cursorY += CFG.LINE_HEIGHT;
+          }
+          cursorY += CFG.PARAGRAPH_GAP;
+      }
+
+      function procesarBloques(doc, bloques) {
+          bloques.forEach(bloque => {
+              
+              if (bloque.type === 'TITULO') {
+                  const esH1 = bloque.nivel <= 2;
+
+                  doc.setFont(CFG.FONT, 'bold');
+                  if (esH1) {
+                      doc.setFontSize(CFG.SIZES.H1);
+                      doc.setTextColor(...CFG.COLORS.PURPLE);
+                      const label = (bloque.numero ? bloque.numero + '. ' : '') + bloque.texto.toUpperCase();
+                      const lineasTitulo = doc.splitTextToSize(label, CFG.CW);
+                      verificarEspacio(doc, (lineasTitulo.length * 7) + 15);
+                      cursorY += 5;
+                      lineasTitulo.forEach(linea => {
+                          doc.text(linea, CFG.ML, cursorY);
+                          cursorY += 7;
+                      });
+                      cursorY += 1;
+                      doc.setDrawColor(...CFG.COLORS.PINK);
+                      doc.setLineWidth(0.5);
+                      doc.line(CFG.ML, cursorY, CFG.PAGE_W - CFG.MR, cursorY);
+                      cursorY += 8;
+                  } else {
+                      // ✅ SUBTÍTULOS SIEMPRE EN ROSA
+                      doc.setFontSize(CFG.SIZES.H2);
+                      doc.setTextColor(...CFG.COLORS.PINK);
+                      const label = (bloque.numero ? bloque.numero + ' ' : '') + bloque.texto;
+                      const lineasTitulo = doc.splitTextToSize(label, CFG.CW);
+                      verificarEspacio(doc, (lineasTitulo.length * 6) + 13);
+                      cursorY += 5;
+                      lineasTitulo.forEach(linea => {
+                          doc.text(linea, CFG.ML, cursorY);
+                          cursorY += 6;
+                      });
+                      cursorY += 2;
+                  }
+              } 
+              else if (bloque.type === 'PARRAFO') {
+                  escribirParrafo(doc, bloque.texto, CFG.SIZES.BODY);
+              } 
+              else if (bloque.type === 'LISTA_BULLET') {
+                  verificarEspacio(doc, 6);
+                  doc.setFillColor(...CFG.COLORS.PINK);
+                  doc.circle(CFG.ML + 2, cursorY - 1.5, 1, 'F');
+                  cursorY -= 2; 
+                  escribirParrafo(doc, bloque.texto, CFG.SIZES.BODY, 8);
+              }
+              else if (bloque.type === 'LISTA_NUM') {
+                  verificarEspacio(doc, 6);
+                  doc.setFont(CFG.FONT, 'bold');
+                  doc.setTextColor(...CFG.COLORS.PURPLE);
+                  doc.setFontSize(CFG.SIZES.BODY);
+                  doc.text(bloque.numero, CFG.ML, cursorY);
+                  cursorY -= 2; 
+                  escribirParrafo(doc, bloque.texto, CFG.SIZES.BODY, 10);
+              }
+else if (bloque.type === 'TABLA') {
+    verificarEspacio(doc, 30);
+    
+    const numCols = bloque.data.headers.length;
+    const anchoDisponible = CFG.PAGE_W - CFG.ML - CFG.MR - 10; // 150mm seguro
+    const anchoPorColumna = anchoDisponible / numCols;
+    
+    const columnStyles = {};
+    for (let i = 0; i < numCols; i++) {
+        columnStyles[i] = { 
+            cellWidth: anchoPorColumna,
+            overflow: 'linebreak',
+            halign: 'left'
+        };
     }
-
-    /////////
-
-    function verificarEspacio(doc, alturaRequerida) {
-        if (cursorY + alturaRequerida > CFG.Y_LIMIT) {
-            doc.addPage();
+    
+    doc.autoTable({
+        startY: cursorY,
+        head: [bloque.data.headers],
+        body: bloque.data.rows,
+        theme: 'grid',
+        tableWidth: 'wrap',
+        columnStyles: columnStyles,
+        headStyles: { 
+          fillColor: CFG.COLORS.PINK, 
+          textColor: 255, 
+          fontStyle: 'bold', 
+          halign: 'left',
+          fontSize: 7,
+          cellPadding: 1.5,
+          overflow: 'linebreak'
+        },
+        bodyStyles: {
+          fontSize: 6,
+          cellPadding: 1.5,
+          valign: 'top',
+          lineColor: CFG.COLORS.PINK,
+          lineWidth: 0.1,
+          overflow: 'linebreak'
+        },
+        styles: { 
+          font: CFG.FONT,
+          textColor: CFG.COLORS.DARK,
+          overflow: 'linebreak',
+          minCellHeight: 6,
+          halign: 'left',
+          cellWidth: 'wrap'
+        },
+        margin: { 
+          left: CFG.ML, 
+          right: CFG.MR, 
+          top: CFG.MT,
+          bottom: CFG.MB + 10 
+        },
+        didParseCell: function(data) {
+            if (typeof data.cell.raw === 'string' && data.cell.raw.includes('**')) {
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.text = [data.cell.raw.replace(/\*\*/g, '')];
+            }
+        },
+        didDrawPage: (data) => { 
+          if (data.pageNumber > 1) {
             numPagina++;
             dibujarFondoPagina(doc);
-            cursorY = CFG.MT;
-            return true;
-        }
-        return false;
-    }
-
-    function escribirParrafo(doc, texto, fontSize, indent = 0, color = CFG.COLORS.DARK, fontStyle = 'normal') {
-        const anchoDisponible = CFG.CW - indent;
-        const startX = CFG.ML + indent;
-        
-        const aplicarEstilos = () => {
-            doc.setFontSize(fontSize);
-            doc.setTextColor(...color);
-            doc.setFont(CFG.FONT, fontStyle);
-        };
-        aplicarEstilos(); 
-
-        const partes = texto.split(/(\*\*.*?\*\*)/g);
-        let palabras = [];
-        
-        partes.forEach(parte => {
-            if(!parte) return;
-            const esBold = parte.startsWith('**') && parte.endsWith('**');
-            const limpio = esBold ? parte.replace(/\*\*/g, '') : parte;
-            const sub = limpio.split(/(\s+)/);
-            sub.forEach(p => { if(p) palabras.push({ txt: p, bold: esBold }); });
-        });
-
-        let lineaActual = [];
-        let anchoLineaActual = 0;
-
-        palabras.forEach(pal => {
-            const estiloToken = pal.bold ? 'bold' : fontStyle;
-            doc.setFont(CFG.FONT, estiloToken);
-            const w = doc.getTextWidth(pal.txt);
-
-            if (anchoLineaActual + w <= anchoDisponible) {
-                lineaActual.push({ ...pal, w: w, style: estiloToken });
-                anchoLineaActual += w;
-            } else {
-                if (!pal.txt.trim()) return;
-
-                const huboSalto = verificarEspacio(doc, CFG.LINE_HEIGHT);
-                if (huboSalto) aplicarEstilos();
-
-                let x = startX;
-                lineaActual.forEach(item => {
-                    doc.setFont(CFG.FONT, item.style);
-                    doc.text(item.txt, x, cursorY);
-                    x += item.w;
-                });
-                
-                cursorY += CFG.LINE_HEIGHT;
-                lineaActual = [{ ...pal, w: w, style: estiloToken }];
-                anchoLineaActual = w;
-            }
-        });
-
-        if (lineaActual.length > 0) {
-            const huboSalto = verificarEspacio(doc, CFG.LINE_HEIGHT);
-            if (huboSalto) aplicarEstilos();
-            
-            let x = startX;
-            lineaActual.forEach(item => {
-                doc.setFont(CFG.FONT, item.style);
-                doc.text(item.txt, x, cursorY);
-                x += item.w;
-            });
-            cursorY += CFG.LINE_HEIGHT;
-        }
-        cursorY += CFG.PARAGRAPH_GAP;
-    }
-
-    function procesarBloques(doc, bloques) {
-        bloques.forEach(bloque => {
-            
-            if (bloque.type === 'TITULO') {
-                const esH1 = bloque.nivel <= 2;
-                const espacio = esH1 ? 25 : 15;
-                verificarEspacio(doc, espacio + 10); 
-
-                doc.setFont(CFG.FONT, 'bold');
-                if (esH1) {
-                    cursorY += 5;
-                    doc.setFontSize(CFG.SIZES.H1);
-                    doc.setTextColor(...CFG.COLORS.PURPLE);
-                    const label = (bloque.numero ? bloque.numero + '. ' : '') + bloque.texto.toUpperCase();
-                    doc.text(label, CFG.ML, cursorY);
-                    cursorY += 3;
-                    doc.setDrawColor(...CFG.COLORS.PINK);
-                    doc.setLineWidth(0.5);
-                    doc.line(CFG.ML, cursorY, CFG.PAGE_W - CFG.MR, cursorY);
-                    cursorY += 10;
-                } else {
-                    cursorY += 5;
-                    doc.setFontSize(CFG.SIZES.H2);
-                    doc.setTextColor(...CFG.COLORS.PINK);
-                    const label = (bloque.numero ? bloque.numero + ' ' : '') + bloque.texto;
-                    doc.text(label, CFG.ML, cursorY);
-                    cursorY += 8;
-                }
-            } 
-            else if (bloque.type === 'PARRAFO') {
-                escribirParrafo(doc, bloque.texto, CFG.SIZES.BODY);
-            } 
-            else if (bloque.type === 'LISTA_BULLET') {
-                verificarEspacio(doc, 6);
-                doc.setFillColor(...CFG.COLORS.PINK);
-                doc.circle(CFG.ML + 2, cursorY - 1.5, 1, 'F');
-                cursorY -= 2; 
-                escribirParrafo(doc, bloque.texto, CFG.SIZES.BODY, 8);
-            }
-            else if (bloque.type === 'LISTA_NUM') {
-                verificarEspacio(doc, 6);
-                doc.setFont(CFG.FONT, 'bold');
-                doc.setTextColor(...CFG.COLORS.PURPLE);
-                doc.setFontSize(CFG.SIZES.BODY);
-                doc.text(bloque.numero, CFG.ML, cursorY);
-                cursorY -= 2; 
-                escribirParrafo(doc, bloque.texto, CFG.SIZES.BODY, 10);
-            }
-            else if (bloque.type === 'TABLA') {
-                verificarEspacio(doc, 30);
-                
-                const anchoMaxTabla = CFG.CW; 
-                
-                // Calcular anchos proporcionales
-                const col1 = 35;  // Campo
-                const col2 = 45;  // Descripción  
-                const col3 = 75;  // Acción Recomendada
-                
-                doc.autoTable({
-                    startY: cursorY,
-                    head: [bloque.data.headers],
-                    body: bloque.data.rows,
-                    theme: 'grid',
-                    tableWidth: anchoMaxTabla,
-                    headStyles: { 
-                      fillColor: CFG.COLORS.PINK, 
-                      textColor: 255, 
-                      fontStyle: 'bold', 
-                      halign: 'center',
-                      fontSize: 9,
-                      cellPadding: 3
-                    },
-                    bodyStyles: {
-                      fontSize: 8,
-                      cellPadding: 3,
-                      valign: 'top',
-                      lineColor: CFG.COLORS.PINK,
-                      lineWidth: 0.1
-                    },
-                    columnStyles: {
-                      0: { cellWidth: col1, halign: 'left' },
-                      1: { cellWidth: col2, halign: 'left' },
-                      2: { cellWidth: col3, halign: 'left' }
-                    },
-                    styles: { 
-                      font: CFG.FONT,
-                      textColor: CFG.COLORS.DARK,
-                      overflow: 'linebreak',
-                      cellWidth: 'wrap',
-                      minCellHeight: 10
-                    },
-                    margin: { 
-                      left: CFG.ML, 
-                      right: CFG.MR, 
-                      top: CFG.MT,
-                      bottom: CFG.MB + 5 
-                    },
-                    didParseCell: function(data) {
-                        if (typeof data.cell.raw === 'string' && data.cell.raw.includes('**')) {
-                            data.cell.styles.fontStyle = 'bold';
-                            data.cell.text = [data.cell.raw.replace(/\*\*/g, '')];
-                        }
-                    },
-                    didDrawPage: (data) => { 
-                      // Corrección: Solo agregamos fondo/numPagina si la tabla salta a una NUEVA página
-                      // (pageNumber es 1 para la primera parte de la tabla, >1 para las siguientes)
-                      if (data.pageNumber > 1) {
-                        numPagina++;
-                        dibujarFondoPagina(doc);
-                      }
-                    }
-                });
-                cursorY = doc.lastAutoTable.finalY + 10;
-            }
-        });
-    }
-// ═══════════════════════════════════════════════════════════════════
-    // 4. PORTADA CORREGIDA Y RECUPERACIÓN DE ÍNDICE
-    // ═══════════════════════════════════════════════════════════════════
-
-    function generarPortada(doc, titulo, proyecto) {
-        // FONDO
-        if (imagenesCargadas.fondoPortada) {
-          try { 
-              doc.addImage(imagenesCargadas.fondoPortada, 'PNG', 0, 0, CFG.PAGE_W, CFG.PAGE_H); 
-          } catch(e) { 
-              doc.setFillColor(15, 15, 20); 
-              doc.rect(0, 0, CFG.PAGE_W, CFG.PAGE_H, 'F'); 
-          }
-        } else {
-          doc.setFillColor(15, 15, 20); 
-          doc.rect(0, 0, CFG.PAGE_W, CFG.PAGE_H, 'F');
-        }
-
-        // LOGO SUPERIOR DERECHO (ONE)
-        if (imagenesCargadas.logoColor) {
-          try {
-            const logoH = 30;
-            const logoW = logoH * 2; 
-            const margenDerecho = 20;
-            const margenSuperior = 30;
-            const posX = CFG.PAGE_W - logoW - margenDerecho;
-            const posY = margenSuperior;
-            doc.addImage(imagenesCargadas.logoColor, 'PNG', posX, posY, logoW, logoH);
-          } catch(e) {
-            doc.setFontSize(40); 
-            doc.setTextColor(255);
-            doc.text("ONE", CFG.PAGE_W - 20, 60, {align:'right'});
           }
         }
-
-        // TÍTULO (con ajuste de texto)
-        doc.setFontSize(40); 
-        doc.setFont(CFG.FONT, 'bold');
-        const titulos = doc.splitTextToSize(titulo.toUpperCase(), 130);
-        const alturaTitulo = titulos.length * 16;
-
-        // PROYECTO (con ajuste de texto)
-        let lineasProyecto = [];
-        let alturaProyecto = 0;
-        if (proyecto) {
-            doc.setFontSize(18);
-            doc.setFont(CFG.FONT, 'normal');
-            lineasProyecto = doc.splitTextToSize(proyecto, 130);
-            alturaProyecto = lineasProyecto.length * 10;
-        }
-
-        const alturaTotal = alturaTitulo + (proyecto ? 20 : 0) + alturaProyecto;
-        let cursorYLocal = (CFG.PAGE_H / 2) - (alturaTotal / 2);
-        
-        const barX = CFG.ML + 5;
-        const barH = alturaTotal + 10; 
-        const cTop = { r: 225, g: 123, b: 215 };
-        const cBot = { r: 107, g: 225, b: 227 };
-
-        for (let i = 0; i <= barH; i++) {
-            const r = Math.round(cTop.r + (cBot.r - cTop.r) * (i/barH));
-            const g = Math.round(cTop.g + (cBot.g - cTop.g) * (i/barH));
-            const b = Math.round(cTop.b + (cBot.b - cTop.b) * (i/barH));
-            doc.setFillColor(r, g, b);
-            doc.rect(barX, cursorYLocal - 5 + i, 4, 1, 'F');
-        }
-
-        doc.setFont(CFG.FONT, 'bold');
-        doc.setFontSize(40);
-        doc.setTextColor(255, 255, 255);
-        
-        titulos.forEach(linea => {
-            doc.text(linea, barX + 15, cursorYLocal + 12); 
-            cursorYLocal += 16;
-        });
-
-        if (proyecto) {
-            cursorYLocal += 8; 
-            doc.setFontSize(18);
-            doc.setTextColor(164, 168, 192); 
-            lineasProyecto.forEach(linea => {
-                doc.text(linea, barX + 15, cursorYLocal);
-                cursorYLocal += 10;
-            });
-        }
-
-        // LOGO INFERIOR (Cuadrado 30x30)
-        if (imagenesCargadas.logoEscencial) {
-            try {
-                const size = 30; // Cuadrado perfecto
-                const posX = CFG.ML; 
-                const posY = CFG.PAGE_H - 40; 
-                doc.addImage(imagenesCargadas.logoEscencial, 'PNG', posX, posY, size, size);
-            } catch (e) { console.warn("Fallo logo inferior"); }
-        }
-    }
-
-    // 👇 ESTA ES LA FUNCIÓN QUE TE FALTABA Y CAUSABA EL ERROR 👇
-    function generarIndiceConEstilo(doc, indiceRaw) {
-        if (!indiceRaw.trim()) return;
-        
-        doc.addPage();
-        dibujarFondoPagina(doc);
-        
-        doc.setFontSize(24);
-        doc.setTextColor(...CFG.COLORS.PURPLE);
-        doc.setFont(CFG.FONT, 'bold');
-        doc.text('ÍNDICE DE CONTENIDOS', CFG.ML, CFG.MT);
-        
-        doc.setDrawColor(...CFG.COLORS.PINK);
-        doc.setLineWidth(1);
-        doc.line(CFG.ML, CFG.MT + 5, CFG.PAGE_W - CFG.MR, CFG.MT + 5);
-        
-        let y = CFG.MT + 20;
-        
-        const lineas = indiceRaw.split('\n').filter(l => !l.toLowerCase().includes('índice') && l.trim().length > 0);
-        const esCorto = lineas.length < 16;
-        const fSize = esCorto ? CFG.SIZES.INDEX_BIG : CFG.SIZES.INDEX_SMALL;
-        const gap = esCorto ? 10 : 7;
-
-        lineas.forEach(linea => {
-            let l = linea.trim().replace(/\*\*/g, '');
-            let esTituloIndice = false;
-            if (l.startsWith('##')) {
-                esTituloIndice = true;
-                l = l.replace(/^#+\s*/, '');
-            }
-            const matchNum = l.match(/^(\d+\.?)\s*(.*)/);
-            
-            if (esTituloIndice) {
-                doc.setFont(CFG.FONT, 'bold');
-                doc.setTextColor(...CFG.COLORS.PURPLE);
-                doc.setFontSize(fSize + 2);
-                doc.text(l.toUpperCase(), CFG.ML, y);
-            } else if (matchNum) {
-                doc.setFont(CFG.FONT, 'bold');
-                doc.setTextColor(...CFG.COLORS.PURPLE);
-                doc.setFontSize(fSize);
-                doc.text(matchNum[1], CFG.ML, y);
-                doc.setFont(CFG.FONT, 'normal');
-                doc.setTextColor(...CFG.COLORS.DARK);
-                doc.text(matchNum[2], CFG.ML + 12, y);
-            } else {
-                doc.setFont(CFG.FONT, 'normal');
-                doc.setTextColor(...CFG.COLORS.DARK);
-                doc.setFontSize(fSize);
-                doc.text(l, CFG.ML, y);
-            }
-            y += gap;
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════════════════
-    // 5. GENERACIÓN CON TIEMPO DE ESPERA
-    // ═══════════════════════════════════════════════════════════════════
-
-    async function generarDocumentoCompleto() {
-        const titulo = document.getElementById('titulo').value || "Manual";
-        const proyecto = document.getElementById('proyecto').value || "";
-        const contenidoRaw = document.getElementById('contenido').value || "";
-        const indiceRaw = document.getElementById('indice').value || "";
-
-        if (!contenidoRaw.trim()) { 
-            alert("⚠️ Contenido vacío."); 
-            return null; 
-        }
-
-        // Precargar imágenes primero
-        await precargarImagenes();
-
-        return new Promise((resolve, reject) => {
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF({ format: 'a4', unit: 'mm' });
-                
-                numPagina = 2;
-                cursorY = CFG.MT;
-                
-                generarPortada(doc, titulo, proyecto);
-                generarIndiceConEstilo(doc, indiceRaw);
-                
-                doc.addPage();
-                dibujarFondoPagina(doc);
-                cursorY = CFG.MT;
-                
-                const bloques = parsearMarkdown(contenidoRaw);
-                procesarBloques(doc, bloques);
-
-                resolve(doc);
-            } catch (e) {
-                console.error("Error generando PDF:", e);
-                reject(e);
-            }
-        });
-    }
-
-    async function previsualizarPDF() {
-        const modal = document.getElementById('pdfPreviewModal');
-        const loadingSpinner = document.getElementById('loadingSpinner');
-        const pdfContainer = document.getElementById('pdfContainer');
-        const pdfFrame = document.getElementById('pdfFrame');
-        const previewBtn = document.getElementById('previewBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-
-        modal.classList.add('active');
-        loadingSpinner.classList.add('active');
-        pdfContainer.style.display = 'none';
-        
-        previewBtn.disabled = true;
-        downloadBtn.disabled = true;
-
-        try {
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            const doc = await generarDocumentoCompleto();
-            pdfGenerado = doc;
-            
-            const pdfBlob = doc.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            pdfFrame.src = pdfUrl;
-            loadingSpinner.classList.remove('active');
-            pdfContainer.style.display = 'block';
-            
-        } catch (error) {
-            alert("❌ Error al generar vista previa: " + error.message);
-            console.error(error);
-            modal.classList.remove('active');
-        } finally {
-            previewBtn.disabled = false;
-            downloadBtn.disabled = false;
-        }
-    }
-
-    async function generarPDF() {
-        const downloadBtn = document.getElementById('downloadBtn');
-        const previewBtn = document.getElementById('previewBtn');
-        
-        downloadBtn.disabled = true;
-        previewBtn.disabled = true;
-        
-        try {
-            let doc;
-            
-            if (pdfGenerado) {
-                doc = pdfGenerado;
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 800));
-                doc = await generarDocumentoCompleto();
-            }
-            
-            const titulo = document.getElementById('titulo').value || "Manual";
-            doc.save(`${titulo.replace(/\s+/g, '_')}_Manual.pdf`);
-            alert('✅ PDF descargado con éxito.');
-            
-        } catch (error) {
-            alert("❌ Error al generar PDF: " + error.message);
-            console.error(error);
-        } finally {
-            downloadBtn.disabled = false;
-            previewBtn.disabled = false;
-        }
-    }
-    
-    function cerrarVistaPrevia() {
-        const modal = document.getElementById('pdfPreviewModal');
-        const pdfFrame = document.getElementById('pdfFrame');
-        
-        modal.classList.remove('active');
-        
-        if (pdfFrame.src) {
-            URL.revokeObjectURL(pdfFrame.src);
-            pdfFrame.src = '';
-        }
-    }
-    
-    function mostrarPrompt() { 
-      document.getElementById('promptModal').classList.add('active'); 
-    }
-    
-    function cerrarPrompt() { 
-      document.getElementById('promptModal').classList.remove('active'); 
-    }
-    
-    function copiarPrompt() {
-      const t = document.getElementById('promptText').innerText;
-      navigator.clipboard.writeText(t).then(() => {
-         const btn = document.getElementById('copyBtn');
-         btn.innerText = '✅ ¡Copiado!';
-         btn.classList.add('copied');
-         setTimeout(() => { 
-           btn.innerText = '📋 Copiar Prompt'; 
-           btn.classList.remove('copied');
-         }, 2000);
-      });
-    }
-
-    // Animación Estrellas
-    const canvas = document.getElementById('stars');
-    if(canvas) {
-        const ctx = canvas.getContext('2d');
-        let W, H;
-        const resize = () => { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; };
-        window.addEventListener('resize', resize); 
-        resize();
-        const stars = Array.from({length: 80}, () => ({x:Math.random()*W, y:Math.random()*H, r:Math.random()*2}));
-        function draw(){
-            ctx.clearRect(0,0,W,H); 
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            stars.forEach(s => { 
-              ctx.beginPath(); 
-              ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); 
-              ctx.fill(); 
-            });
-            requestAnimationFrame(draw);
-        }
-        draw();
-    }
-
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        cerrarPrompt();
-        cerrarVistaPrevia();
-      }
     });
-</script>
-</body>
-</html>
+    
+    cursorY = doc.lastAutoTable.finalY + 10;
+}
+          });
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // 4. PORTADA
+      // ═══════════════════════════════════════════════════════════════════
+      function generarPortada(doc, titulo, proyecto) {
+          if (imagenesCargadas.fondoPortada && imagenesCargadas.fondoPortada.data) {
+            try { 
+                doc.addImage(imagenesCargadas.fondoPortada.data, imagenesCargadas.fondoPortada.formato, 0, 0, CFG.PAGE_W, CFG.PAGE_H); 
+            } catch(e) { 
+                console.warn("Error cargando fondo portada:", e);
+                doc.setFillColor(15, 15, 20); 
+                doc.rect(0, 0, CFG.PAGE_W, CFG.PAGE_H, 'F'); 
+            }
+          } else {
+            doc.setFillColor(15, 15, 20); 
+            doc.rect(0, 0, CFG.PAGE_W, CFG.PAGE_H, 'F');
+          }
+
+          if (imagenesCargadas.logoColor && imagenesCargadas.logoColor.data) {
+            try {
+              const logoH = 30;
+              const logoW = logoH * 2; 
+              const margenDerecho = 20;
+              const margenSuperior = 30;
+              const posX = CFG.PAGE_W - logoW - margenDerecho;
+              const posY = margenSuperior;
+              doc.addImage(imagenesCargadas.logoColor.data, imagenesCargadas.logoColor.formato, posX, posY, logoW, logoH);
+            } catch(e) {
+              doc.setFontSize(40); 
+              doc.setTextColor(255);
+              doc.text("ONE", CFG.PAGE_W - 20, 60, {align:'right'});
+            }
+          }
+
+          doc.setFontSize(40); 
+          doc.setFont(CFG.FONT, 'bold');
+          const titulos = doc.splitTextToSize(titulo.toUpperCase(), 130);
+          const alturaTitulo = titulos.length * 16;
+
+          let lineasProyecto = [];
+          let alturaProyecto = 0;
+          if (proyecto) {
+              doc.setFontSize(18);
+              doc.setFont(CFG.FONT, 'normal');
+              lineasProyecto = doc.splitTextToSize(proyecto, 130);
+              alturaProyecto = lineasProyecto.length * 10;
+          }
+
+          const alturaTotal = alturaTitulo + (proyecto ? 20 : 0) + alturaProyecto;
+          let cursorYLocal = (CFG.PAGE_H / 2) - (alturaTotal / 2);
+          
+          const barX = CFG.ML + 5;
+          const barH = alturaTotal + 10; 
+          const cTop = { r: 225, g: 123, b: 215 };
+          const cBot = { r: 107, g: 225, b: 227 };
+
+          for (let i = 0; i <= barH; i++) {
+              const r = Math.round(cTop.r + (cBot.r - cTop.r) * (i/barH));
+              const g = Math.round(cTop.g + (cBot.g - cTop.g) * (i/barH));
+              const b = Math.round(cTop.b + (cBot.b - cTop.b) * (i/barH));
+              doc.setFillColor(r, g, b);
+              doc.rect(barX, cursorYLocal - 5 + i, 4, 1, 'F');
+          }
+
+          doc.setFont(CFG.FONT, 'bold');
+          doc.setFontSize(40);
+          doc.setTextColor(255, 255, 255);
+          
+          titulos.forEach(linea => {
+              doc.text(linea, barX + 15, cursorYLocal + 12); 
+              cursorYLocal += 16;
+          });
+
+          if (proyecto) {
+              cursorYLocal += 8; 
+              doc.setFontSize(18);
+              doc.setTextColor(164, 168, 192); 
+              lineasProyecto.forEach(linea => {
+                  doc.text(linea, barX + 15, cursorYLocal);
+                  cursorYLocal += 10;
+              });
+          }
+
+          if (imagenesCargadas.logoEscencial && imagenesCargadas.logoEscencial.data) {
+              try {
+                  const size = 30;
+                  const posX = CFG.ML; 
+                  const posY = CFG.PAGE_H - 40; 
+                  doc.addImage(imagenesCargadas.logoEscencial.data, imagenesCargadas.logoEscencial.formato, posX, posY, size, size);
+              } catch (e) { console.warn("Fallo logo inferior"); }
+          }
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // ÍNDICE CON PAGINACIÓN
+      // ═══════════════════════════════════════════════════════════════════
+      function generarIndiceConEstilo(doc, indiceRaw) {
+          if (!indiceRaw.trim()) return;
+          
+          doc.addPage();
+          
+          const fy = 285;
+          doc.setDrawColor(...CFG.COLORS.PINK);
+          doc.setLineWidth(1);
+          doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
+          
+          doc.setFontSize(24);
+          doc.setTextColor(...CFG.COLORS.PURPLE);
+          doc.setFont(CFG.FONT, 'bold');
+          doc.text('ÍNDICE DE CONTENIDOS', CFG.ML, CFG.MT);
+          
+          doc.setDrawColor(...CFG.COLORS.PINK);
+          doc.setLineWidth(1);
+          doc.line(CFG.ML, CFG.MT + 5, CFG.PAGE_W - CFG.MR, CFG.MT + 5);
+          
+          let y = CFG.MT + 20;
+          
+          const lineas = indiceRaw.split('\n').filter(l => !l.toLowerCase().includes('índice') && l.trim().length > 0);
+          const esCorto = lineas.length < 16;
+          const fSize = esCorto ? CFG.SIZES.INDEX_BIG : CFG.SIZES.INDEX_SMALL;
+          const gap = esCorto ? 10 : 7;
+          
+          const Y_LIMIT_INDICE = 265;
+
+          lineas.forEach(linea => {
+              if (y > Y_LIMIT_INDICE) {
+                  doc.addPage();
+                  doc.setDrawColor(...CFG.COLORS.PINK);
+                  doc.setLineWidth(1);
+                  doc.line(CFG.ML, fy - 5, CFG.PAGE_W - CFG.MR, fy - 5);
+                  y = CFG.MT;
+              }
+              
+              let l = linea.trim().replace(/\*\*/g, '');
+              let esTituloIndice = false;
+              
+              if (l.startsWith('##')) {
+                  esTituloIndice = true;
+                  l = l.replace(/^#+\s*/, '');
+              }
+              
+              const matchNum = l.match(/^(\d+(?:\.\d+)*\.?)\s*(.*)/);
+              
+              if (esTituloIndice) {
+                  doc.setFont(CFG.FONT, 'bold');
+                  doc.setTextColor(...CFG.COLORS.PURPLE);
+                  doc.setFontSize(fSize + 2);
+                  doc.text(l.toUpperCase(), CFG.ML, y);
+              } else if (matchNum) {
+                  doc.setFont(CFG.FONT, 'bold');
+                  doc.setTextColor(...CFG.COLORS.PURPLE);
+                  doc.setFontSize(fSize);
+                  doc.text(matchNum[1], CFG.ML, y);
+                  doc.setFont(CFG.FONT, 'normal');
+                  doc.setTextColor(...CFG.COLORS.DARK);
+                  doc.text(matchNum[2], CFG.ML + 12, y);
+              } else {
+                  doc.setFont(CFG.FONT, 'normal');
+                  doc.setTextColor(...CFG.COLORS.DARK);
+                  doc.setFontSize(fSize);
+                  doc.text(l, CFG.ML, y);
+              }
+              y += gap;
+          });
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // CONTRAPORTADA
+      // ═══════════════════════════════════════════════════════════════════
+      function generarContraportada(doc) {
+          doc.addPage();
+          if (imagenesCargadas.contraportada && imagenesCargadas.contraportada.data) {
+              try {
+                  doc.addImage(imagenesCargadas.contraportada.data, imagenesCargadas.contraportada.formato, 0, 0, CFG.PAGE_W, CFG.PAGE_H);
+              } catch(e) {
+                  console.warn("Error cargando contraportada:", e);
+                  doc.setFillColor(15, 15, 20);
+                  doc.rect(0, 0, CFG.PAGE_W, CFG.PAGE_H, 'F');
+              }
+          } else {
+              doc.setFillColor(15, 15, 20);
+              doc.rect(0, 0, CFG.PAGE_W, CFG.PAGE_H, 'F');
+          }
+      }
+
+      // ═══════════════════════════════════════════════════════════════════
+      // 5. GENERACIÓN
+      // ═══════════════════════════════════════════════════════════════════
+      async function generarDocumentoCompleto() {
+          const titulo = document.getElementById('titulo').value || "Manual";
+          const proyecto = document.getElementById('proyecto').value || "";
+          const contenidoRaw = document.getElementById('contenido').value || "";
+          const indiceRaw = document.getElementById('indice').value || "";
+
+          if (!contenidoRaw.trim()) { 
+              alert("⚠️ Contenido vacío."); 
+              return null; 
+          }
+
+          await precargarImagenes();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          return new Promise((resolve, reject) => {
+              try {
+                  const { jsPDF } = window.jspdf;
+                  const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+                  
+                  numPagina = 2;
+                  cursorY = CFG.MT;
+                  
+                  generarPortada(doc, titulo, proyecto);
+                  generarIndiceConEstilo(doc, indiceRaw);
+                  
+                  doc.addPage();
+                  dibujarFondoPagina(doc);
+                  cursorY = CFG.MT;
+                  
+                  const bloques = parsearMarkdown(contenidoRaw);
+                  procesarBloques(doc, bloques);
+                  
+                  generarContraportada(doc);
+
+                  resolve(doc);
+              } catch (e) {
+                  console.error("Error generando PDF:", e);
+                  reject(e);
+              }
+          });
+      }
+
+      async function previsualizarPDF() {
+          const modal = document.getElementById('pdfPreviewModal');
+          const loadingSpinner = document.getElementById('loadingSpinner');
+          const pdfContainer = document.getElementById('pdfContainer');
+          const pdfFrame = document.getElementById('pdfFrame');
+          const previewBtn = document.getElementById('previewBtn');
+          const downloadBtn = document.getElementById('downloadBtn');
+
+          modal.classList.add('active');
+          loadingSpinner.classList.add('active');
+          pdfContainer.style.display = 'none';
+          
+          previewBtn.disabled = true;
+          downloadBtn.disabled = true;
+
+          try {
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              const doc = await generarDocumentoCompleto();
+              pdfGenerado = doc;
+              
+              const pdfBlob = doc.output('blob');
+              const pdfUrl = URL.createObjectURL(pdfBlob);
+              
+              await new Promise(resolve => setTimeout(resolve, 500));
+              
+              pdfFrame.src = pdfUrl;
+              loadingSpinner.classList.remove('active');
+              pdfContainer.style.display = 'block';
+              
+          } catch (error) {
+              alert("❌ Error al generar vista previa: " + error.message);
+              console.error(error);
+              modal.classList.remove('active');
+          } finally {
+              previewBtn.disabled = false;
+              downloadBtn.disabled = false;
+          }
+      }
+
+      async function generarPDF() {
+          const downloadBtn = document.getElementById('downloadBtn');
+          const previewBtn = document.getElementById('previewBtn');
+          
+          const textoOriginal = "✨ Generar y Descargar PDF";
+
+          downloadBtn.disabled = true;
+          previewBtn.disabled = true;
+          downloadBtn.innerText = "⏳ Procesando...";
+          
+          try {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+
+              let doc;
+              if (pdfGenerado) {
+                  doc = pdfGenerado;
+              } else {
+                  doc = await generarDocumentoCompleto();
+              }
+              
+              const titulo = document.getElementById('titulo').value || "Manual";
+              const nombreArchivo = `${titulo.replace(/\s+/g, '_')}_Manual.pdf`;
+              
+              doc.save(nombreArchivo);
+              
+              alert('✅ PDF descargado con éxito.');
+              
+          } catch (error) {
+              alert("❌ Error al generar PDF: " + error.message);
+              console.error(error);
+          } finally {
+              downloadBtn.disabled = false;
+              previewBtn.disabled = false;
+              downloadBtn.innerText = textoOriginal;
+          }
+      }
+      
+      function cerrarVistaPrevia() {
+          const modal = document.getElementById('pdfPreviewModal');
+          const pdfFrame = document.getElementById('pdfFrame');
+          
+          modal.classList.remove('active');
+          
+          if (pdfFrame.src) {
+              URL.revokeObjectURL(pdfFrame.src);
+              pdfFrame.src = '';
+          }
+      }
+      
+      function mostrarPrompt() { 
+        document.getElementById('promptModal').classList.add('active'); 
+      }
+      
+      function cerrarPrompt() { 
+        document.getElementById('promptModal').classList.remove('active'); 
+      }
+      
+      function copiarPrompt() {
+        const t = document.getElementById('promptText').innerText;
+        navigator.clipboard.writeText(t).then(() => {
+          const btn = document.getElementById('copyBtn');
+          btn.innerText = '✅ ¡Copiado!';
+          btn.classList.add('copied');
+          setTimeout(() => { 
+            btn.innerText = '📋 Copiar Prompt'; 
+            btn.classList.remove('copied');
+          }, 2000);
+        });
+      }
+
+      const canvas = document.getElementById('stars');
+      if(canvas) {
+          const ctx = canvas.getContext('2d');
+          let W, H;
+          const resize = () => { W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; };
+          window.addEventListener('resize', resize); 
+          resize();
+          const stars = Array.from({length: 80}, () => ({x:Math.random()*W, y:Math.random()*H, r:Math.random()*2}));
+          function draw(){
+              ctx.clearRect(0,0,W,H); 
+              ctx.fillStyle = 'rgba(255,255,255,0.4)';
+              stars.forEach(s => { 
+                ctx.beginPath(); 
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); 
+                ctx.fill(); 
+              });
+              requestAnimationFrame(draw);
+          }
+          draw();
+      }
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          cerrarPrompt();
+          cerrarVistaPrevia();
+        }
+      });
+  </script>
+
+  </body>
+  </html>
